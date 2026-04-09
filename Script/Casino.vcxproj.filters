@@ -42,6 +42,9 @@
     <ClCompile Include="UpDown.cpp.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="BombGame.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="System.h">
@@ -66,6 +69,9 @@
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="UpDown.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="BombGame.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>
