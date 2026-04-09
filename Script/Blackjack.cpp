@@ -4,7 +4,7 @@
 #include <random>
 #include <iostream>  
 #include <conio.h>
-#include <windows.h> // Sleep 사용
+#include <windows.h>
 
 using namespace std;
 
@@ -93,7 +93,7 @@ void PlayBlackjack(int& money) {
     system("cls");
     SetColor(11);
     cout << "===============================================" << endl;
-    cout << "              [ 2. BLACKJACK ]" << endl;
+    cout << "               [ 2. BLACKJACK ]" << endl;
     cout << "===============================================" << endl;
     SetColor(15);
 
@@ -108,7 +108,7 @@ void PlayBlackjack(int& money) {
 
     Hand player, dealer;
 
-    // --- 초기 배분 애니메이션 ---
+    // 초기 배분 애니메이션
     system("cls");
     cout << "\n카드를 나누어 줍니다..." << endl;
     player.addCard(deck.drawCard());
@@ -129,27 +129,26 @@ void PlayBlackjack(int& money) {
     dealer.showHand("Dealer (Hidden)");
     player.showHand("Player");
 
-    // --- 플레이어 턴 (도배 방지) ---
+    // --- 플레이어 턴 (1: Hit, 2: Stand, 3: Double) ---
     while (true) {
         if (player.getTotal() >= 21) break;
 
-        // 질문 출력 전 키보드 버퍼 강제 청소
-        while (_kbhit()) _getch();
+        while (_kbhit()) _getch(); // 키보드 버퍼 비우기
 
-        cout << "\n(H)it, (S)tand, (D)ouble? ";
+        cout << "\n[1] 히트(Hit) [2] 스탠드(Stand) [3] 더블다운(Double): ";
         char choice = (char)_getch();
 
-        if (choice == 'h' || choice == 'H') {
+        if (choice == '1') {
             player.addCard(deck.drawCard());
             system("cls");
             dealer.showHand("Dealer (Hidden)");
             player.showHand("Player");
             Sleep(400);
         }
-        else if (choice == 's' || choice == 'S') {
+        else if (choice == '2') {
             break;
         }
-        else if (choice == 'd' || choice == 'D') {
+        else if (choice == '3') {
             if (money >= bet * 2) {
                 bet *= 2;
                 player.addCard(deck.drawCard());
@@ -166,7 +165,7 @@ void PlayBlackjack(int& money) {
         }
     }
 
-    // --- 딜러 턴 ---
+    // 딜러 턴
     int pTotal = player.getTotal();
     if (pTotal <= 21) {
         while (dealer.getTotal() < 17) {
@@ -179,7 +178,7 @@ void PlayBlackjack(int& money) {
         }
     }
 
-    // --- 결과 ---
+    // 결과
     system("cls");
     dealer.showHand("Dealer");
     player.showHand("Player");
