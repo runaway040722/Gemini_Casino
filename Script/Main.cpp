@@ -7,6 +7,7 @@
 #include "Poker.h"
 #include "UpDown.h"
 #include "BombGame.h"
+#include "NumberBaseball.h"
 #include "Mine.h"  // ★ 광산 헤더 추가
 #include <limits>
 
@@ -46,6 +47,7 @@ void ShowMainMenu(int money) {
     cout << "      (5)  포커 " << endl;
     cout << "      (6)  업다운 게임" << endl;
     cout << "      (7)  폭탄 게임" << endl;
+    cout << "      (8)  숫자 야구" << endl;
     cout << endl;
     SetColor(12); // 종료
     cout << "      (0)  게임 종료" << endl;
@@ -92,6 +94,7 @@ int main() {
         }
         case 6: PlayUpDown(money); break;
         case 7: PlayBombGame(money); break;
+        case 8: PlayNumberBaseball(money); break;
         case 0:
             system("cls");
             SetColor(14);
