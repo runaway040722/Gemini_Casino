@@ -5,6 +5,7 @@
 #include "EvenOdd.h"
 #include "HorseRacing.h"
 #include "Poker.h"
+#include "UpDown.h"
 #include "Mine.h"  // ★ 광산 헤더 추가
 #include <limits>
 
@@ -15,14 +16,14 @@ void ShowMainMenu(int money) {
 
     SetColor(14); // 금색
     cout << "  ##########################################################" << endl;
-    cout << "  ##                                                        ##" << endl;
+    cout << "  ##                                                      ##" << endl;
     cout << "  ##      @@@@    @@@@    @@@@    @@@@    @  @    @@      ##" << endl;
     cout << "  ##     @       @    @  @        @    @  @  @   @  @     ##" << endl;
     cout << "  ##     @       @@@@@@   @@@@    @    @  @  @   @  @     ##" << endl;
     cout << "  ##     @       @    @       @   @    @  @  @   @  @     ##" << endl;
     cout << "  ##      @@@@   @    @   @@@@    @@@@    @  @    @@      ##" << endl;
-    cout << "  ##                                                        ##" << endl;
-    cout << "  ##               [ 대 박 기 원  카 지 노 ]               ##" << endl;
+    cout << "  ##                                                      ##" << endl;
+    cout << "  ##              [ 대 박 기 원  카 지 노 ]               ##" << endl;
     cout << "  ##########################################################" << endl;
 
     SetColor(11); // 청록색 구분선
@@ -42,6 +43,7 @@ void ShowMainMenu(int money) {
     cout << "      (3)  홀짝 룰렛 " << endl;
     cout << "      (4)  경마" << endl;
     cout << "      (5)  포커 " << endl;
+    cout << "      (6)  업다운 게임" << endl;
     cout << endl;
     SetColor(12); // 종료
     cout << "      (0)  게임 종료" << endl;
@@ -86,6 +88,7 @@ int main() {
             cin.get();
             break;
         }
+        case 6: PlayUpDown(money); break;
         case 0:
             system("cls");
             SetColor(14);

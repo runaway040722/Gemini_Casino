@@ -22,6 +22,7 @@ void PlayEvenOdd(int& money) {
 
     system("cls");
     int bet;
+    cout << "현재 자산: $" << money << endl;
     cout << "배팅 금액: ";
 
     // 배팅 금액 입력 및 유효성 검사

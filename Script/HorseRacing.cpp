@@ -50,6 +50,7 @@ void PlayHorseRacing(int& money) {
     cout << "----------------------------------------------------------" << endl;
 
     int bet;
+    cout << "현재 자산: $" << money << endl;
     cout << " 배팅 금액: ";
     if (!(cin >> bet) || bet <= 0 || bet > money) {
         cout << " 잘못된 금액입니다!" << endl;
