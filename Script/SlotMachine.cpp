@@ -1,39 +1,28 @@
 ﻿#include "SlotMachine.h"
-#include "System.h"   // SetColor, FlushBuffer, ClearBuffer 사용
+#include "System.h"   
+#include <iostream>
+#include <random>
+#include <windows.h>
 
 using namespace std;
 
 void PlaySlotMachine(int& money) {
     string symbols[] = { "바나나", "  7   ", " 폭탄 ", " 체리 ", "다이아" };
 
-    system("cls"); SetColor(14);
-    cout << "===============================================" << endl;
-    cout << "          [ 1. 777 LUCKY SLOT ]" << endl;
-    cout << "===============================================" << endl; SetColor(15);
-
-    int bet; 
-    cout << "현재 자산: $" << money << endl;
-    cout << "배팅 금액: ";
-    if (!(cin >> bet) || bet <= 0 || bet > money) {
-        cout << "잘못된 배팅!";
-        ClearBuffer(); // 청소 + 대기 후 바로 종료
-        return;
-    }
-
-    // [개선] 배팅 후 엔터를 막 쳤거나 문자를 섞었어도 여기서 싹 비움
+    // 1. 베팅 단계 (GetBetAmount 내부에서 화면을 지우고 시작함)
+    int bet = GetBetAmount(money);
     FlushBuffer();
 
-    random_device rd; mt19937 gen(rd());
-    uniform_int_distribution<int> dist(0, 4);
+    money -= bet; // 베팅금 선차감
 
+    // 2. 슬롯 회전 연출
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_int_distribution<int> dist(0, 4);
     string slot[3] = { " ??? ", " ??? ", " ??? " };
 
     for (int i = 0; i <= 35; i++) {
-        system("cls"); SetColor(14);
-        cout << "===============================================" << endl;
-        cout << "          [ 1. 777 LUCKY SLOT ]" << endl;
-        cout << "===============================================" << endl; SetColor(15);
-
+        gotoxy(0, 5);
         cout << "\n      ┌────────┬────────┬────────┐" << endl;
         cout << "      │";
 
@@ -42,46 +31,37 @@ void PlaySlotMachine(int& money) {
         if (i < 35) slot[2] = symbols[dist(gen)];
 
         for (int j = 0; j < 3; j++) {
-            cout << " " << slot[j] << " │";
+            if (slot[j] == "  7   ") SetColor(14);
+            else if (slot[j] == " 폭탄 ") SetColor(12);
+            else if (slot[j] == "다이아") SetColor(11);
+            else SetColor(15);
+
+            cout << " " << slot[j] << " ";
+            SetColor(15);
+            cout << "│";
         }
         cout << "\n      └────────┴────────┴────────┘" << endl;
 
-        if (i == 15 || i == 25 || i == 35) {
-            Sleep(400);
-        }
-        else {
-            Sleep(40);
-        }
+        if (i == 15 || i == 25 || i == 35) Sleep(500);
+        else Sleep(40);
     }
 
-    // --- 결과 판정 ---
+    // 3. 결과 판정 (당첨금 winAmount만 계산)
     int winAmount = 0;
-    if (slot[0] == "  7   " && slot[1] == "  7   " && slot[2] == "  7   ") {
-        SetColor(10); cout << "\n*** JACKPOT!!! 7-7-7 (50배) ***" << endl;
-        winAmount = bet * 50;
+    string s1 = slot[0], s2 = slot[1], s3 = slot[2];
+
+    if (s1 == "  7   " && s2 == "  7   " && s3 == "  7   ") {
+        winAmount = bet * 50; // 잭팟
     }
-    else if (slot[0] == slot[1] && slot[1] == slot[2]) {
-        if (slot[0] == " 폭탄 ") { SetColor(12); cout << "\n폭탄 3개! 꽝입니다." << endl; }
-        else { SetColor(11); cout << "\n그림 일치! (5배)" << endl; winAmount = bet * 5; }
+    else if (s1 == s2 && s2 == s3) {
+        if (s1 != " 폭탄 ") winAmount = bet * 5; // 3개 일치
     }
-    else {
-        SetColor(8); cout << "\n아쉽게도 꽝입니다." << endl;
+    else if (s1 == s2 || s2 == s3 || s1 == s3) {
+        winAmount = (int)(bet * 1.5); // 2개 일치
     }
 
-    // --- 정산 ---
-    if (winAmount > 0) {
-        money += (winAmount - bet);
-        SetColor(10); cout << "획득 금액: +$" << winAmount << endl;
-    }
-    else {
-        money -= bet;
-        SetColor(12); cout << "손실 금액: -$" << bet << endl;
-    }
+    // 4. 공통 정산 함수 호출 (순수익 계산 및 출력)
+    PrintResult(money, bet, winAmount);
 
-    SetColor(15);
-    cout << "-----------------------------------------------" << endl;
-    cout << "현재 보유 자산: $" << money << endl;
-
-    // [개선] 게임 끝! 청소하고 "아무 키나 누르세요" 대기
     ClearBuffer();
 }

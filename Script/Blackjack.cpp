@@ -1,21 +1,23 @@
-#include "Blackjack.h"
-#include "System.h"   
+#include <iostream>
 #include <algorithm>
 #include <random>
-#include <iostream>  
-#include <conio.h>
+#include <string>
 #include <windows.h>
+#include <conio.h>
+
+#include "Blackjack.h"
+#include "System.h"
 
 using namespace std;
 
-// --- 클래스 메서드 구현 ---
-
+// --- Card 구현 ---
 int Card::getValue() const {
-    if (rank >= CardRank::TEN) return 10;
+    if ((int)rank >= 10) return 10;
     if (rank == CardRank::ACE) return 11;
     return (int)rank;
 }
 
+// --- Deck 구현 ---
 Deck::Deck() {
     for (int s = 0; s < 4; ++s) {
         for (int r = 1; r <= 13; ++r) {
@@ -32,15 +34,14 @@ void Deck::shuffleDeck() {
 }
 
 Card Deck::drawCard() {
-    if (cards.empty()) { *this = Deck(); }
+    if (cards.empty()) { Deck temp; *this = temp; }
     Card c = cards.back();
     cards.pop_back();
     return c;
 }
 
-void Hand::addCard(Card card) {
-    cards.push_back(card);
-}
+// --- Hand 구현 ---
+void Hand::addCard(Card card) { cards.push_back(card); }
 
 int Hand::getTotal() const {
     int total = 0;
@@ -56,24 +57,32 @@ int Hand::getTotal() const {
     return total;
 }
 
-void Hand::showHand(string owner) const {
+void Hand::showHand(string owner, bool hideFirstCard) const {
     string ranks[] = { "", "A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K" };
     string suitIcons[] = { "SP", "HT", "DI", "CL" };
 
     cout << "\n--- " << owner << "'s Hand ---" << endl;
     for (int line = 0; line < 5; ++line) {
-        for (const auto& card : cards) {
-            if (card.suit == CardSuit::HEARTS || card.suit == CardSuit::DIAMONDS) SetColor(12);
+        for (size_t i = 0; i < cards.size(); ++i) {
+            if (hideFirstCard && i == 0) {
+                SetColor(8);
+                if (line == 0) cout << ".-------.  ";
+                else if (line == 1 || line == 3) cout << "| ?   ? |  ";
+                else if (line == 2) cout << "|  ???  |  ";
+                else if (line == 4) cout << "'-------'  ";
+                continue;
+            }
+
+            if (cards[i].suit == CardSuit::HEARTS || cards[i].suit == CardSuit::DIAMONDS) SetColor(12);
             else SetColor(15);
 
-            string r = ranks[(int)card.rank];
-
+            string r = ranks[(int)cards[i].rank];
             if (line == 0) cout << ".-------.  ";
             else if (line == 1) {
                 if (r == "10") cout << "| " << r << "    |  ";
                 else           cout << "| " << r << "     |  ";
             }
-            else if (line == 2) cout << "|  " << suitIcons[(int)card.suit] << "   |  ";
+            else if (line == 2) cout << "|  " << suitIcons[(int)cards[i].suit] << "   |  ";
             else if (line == 3) {
                 if (r == "10") cout << "|    " << r << " |  ";
                 else           cout << "|     " << r << " |  ";
@@ -83,11 +92,11 @@ void Hand::showHand(string owner) const {
         cout << endl;
     }
     SetColor(15);
-    cout << "Total: " << getTotal() << endl;
+    if (!hideFirstCard) cout << "Total: " << getTotal() << endl;
+    else cout << "Total: ???" << endl;
 }
 
-// --- 게임 실행 로직 ---
-
+// --- 메인 로직 ---
 void PlayBlackjack(int& money) {
     Deck deck;
     system("cls");
@@ -97,137 +106,63 @@ void PlayBlackjack(int& money) {
     cout << "===============================================" << endl;
     SetColor(15);
 
-    int bet;
-    cout << "현재 자산: $" << money << endl;
-    cout << "배팅 금액: ";
-    if (!(cin >> bet) || bet <= 0 || bet > money) {
-        cout << "잘못된 배팅 금액입니다!" << endl;
-        ClearBuffer();
-        return;
-    }
+    int bet = GetBetAmount(money);
     FlushBuffer();
 
     Hand player, dealer;
-
-    // 초기 배분 연출
-    system("cls");
-    cout << "\n카드를 나누어 줍니다..." << endl;
     player.addCard(deck.drawCard());
-    player.showHand("Player");
-    Sleep(600);
     dealer.addCard(deck.drawCard());
-    system("cls");
-    dealer.showHand("Dealer (Hidden)");
-    player.showHand("Player");
-    Sleep(600);
     player.addCard(deck.drawCard());
-    system("cls");
-    dealer.showHand("Dealer (Hidden)");
-    player.showHand("Player");
-    Sleep(600);
     dealer.addCard(deck.drawCard());
-    system("cls");
-    dealer.showHand("Dealer (Hidden)");
-    player.showHand("Player");
 
-    // --- 플레이어 턴 ---
-    while (true) {
+    bool playerDone = false;
+    while (!playerDone) {
+        system("cls");
+        dealer.showHand("Dealer", true);
+        player.showHand("Player", false);
+
         if (player.getTotal() >= 21) break;
 
-        while (_kbhit()) _getch();
-
-        cout << "\n[1] 히트(Hit) [2] 스탠드(Stand) [3] 더블다운(Double): ";
+        cout << "\n [1] 히트(Hit) [2] 스탠드(Stand) [3] 더블다운(Double): ";
         char choice = (char)_getch();
 
-        if (choice == '1') {
-            player.addCard(deck.drawCard());
-            system("cls");
-            dealer.showHand("Dealer (Hidden)");
-            player.showHand("Player");
-            Sleep(400);
-        }
-        else if (choice == '2') {
-            break;
-        }
+        if (choice == '1') player.addCard(deck.drawCard());
+        else if (choice == '2') playerDone = true;
         else if (choice == '3') {
             if (money >= bet * 2) {
                 bet *= 2;
                 player.addCard(deck.drawCard());
-                system("cls");
-                dealer.showHand("Dealer (Hidden)");
-                player.showHand("Player");
-                Sleep(400);
-                break;
+                playerDone = true;
             }
             else {
-                cout << "\n잔액이 부족합니다!";
-                Sleep(800);
+                SetColor(12); cout << "\n [!] 잔액 부족!"; SetColor(15); Sleep(600);
             }
         }
     }
 
-    // --- 딜러 턴 (강화된 승부사 AI) ---
     int pTotal = player.getTotal();
     if (pTotal <= 21) {
-        while (true) {
-            int dTotal = dealer.getTotal();
-
-            // 딜러가 카드를 뽑아야 하는 상황:
-            // 1. 딜러 점수가 17점 미만일 때 (기본 룰)
-            // 2. 딜러가 플레이어보다 점수가 낮고, 딜러 점수가 19점 이하일 때 (공격적 배팅)
-            if (dTotal < 17 || (dTotal < pTotal && dTotal <= 19)) {
-                system("cls");
-                SetColor(11);
-                cout << "\n[딜러 턴] ";
-                if (dTotal < 17) cout << "규칙에 따라 카드를 추가로 뽑습니다..." << endl;
-                else cout << "플레이어를 이기기 위해 무리해서라도 카드를 뽑습니다!" << endl;
-
-                SetColor(15);
-                dealer.showHand("Dealer");
-                player.showHand("Player");
-                Sleep(1200);
-
-                dealer.addCard(deck.drawCard());
-            }
-            else {
-                // 17점 이상이면서 플레이어보다 높거나, 20점 이상이면 멈춤
-                break;
-            }
+        while (dealer.getTotal() < 17) {
+            system("cls");
+            dealer.showHand("Dealer", false);
+            player.showHand("Player", false);
+            cout << "\n 딜러가 카드를 뽑는 중..." << endl;
+            Sleep(1000);
+            dealer.addCard(deck.drawCard());
         }
     }
 
-    // --- 결과 정산 ---
     system("cls");
-    dealer.showHand("Dealer");
-    player.showHand("Player");
-
+    dealer.showHand("Dealer", false);
+    player.showHand("Player", false);
     int dTotal = dealer.getTotal();
+
     cout << "\n===============================================" << endl;
-    cout << " [결과] ";
-
-    if (pTotal > 21) {
-        SetColor(12); cout << "Player Bust! 패배..." << endl;
-        money -= bet;
-    }
-    else if (dTotal > 21) {
-        SetColor(10); cout << "Dealer Bust! Player Win!" << endl;
-        money += bet;
-    }
-    else if (pTotal > dTotal) {
-        SetColor(10); cout << "Player Win! 축하합니다!" << endl;
-        money += bet;
-    }
-    else if (pTotal < dTotal) {
-        SetColor(12); cout << "Dealer Win! 패배..." << endl;
-        money -= bet;
-    }
-    else {
-        SetColor(14); cout << "Push! 무승부입니다." << endl;
-    }
-
+    if (pTotal > 21) { SetColor(12); cout << "Bust! 패배"; money -= bet; }
+    else if (dTotal > 21 || pTotal > dTotal) { SetColor(10); cout << "승리!"; money += bet; }
+    else if (pTotal < dTotal) { SetColor(12); cout << "패배"; money -= bet; }
+    else { SetColor(14); cout << "무승부"; }
     SetColor(15);
-    cout << "===============================================" << endl;
-    cout << "현재 보유 자산: $" << money << endl;
-
+    cout << "\n===============================================" << endl;
     ClearBuffer();
 }

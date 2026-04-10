@@ -1,11 +1,9 @@
 #ifndef BLACKJACK_H
 #define BLACKJACK_H
 
-#include "System.h"
 #include <vector>
 #include <string>
 
-// 이름 충돌 방지를 위한 enum class
 enum class CardRank { ACE = 1, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, JACK, QUEEN, KING };
 enum class CardSuit { SPADES, HEARTS, DIAMONDS, CLUBS };
 
@@ -29,10 +27,10 @@ public:
     std::vector<Card> cards;
     void addCard(Card card);
     int getTotal() const;
-    void showHand(std::string owner) const;
+    // 두 번째 인자(bool)를 반드시 추가해야 소스 파일과 호환됩니다.
+    void showHand(std::string owner, bool hideFirstCard = false) const;
 };
 
-// 메인에서 호출할 함수
 void PlayBlackjack(int& money);
 
 #endif
