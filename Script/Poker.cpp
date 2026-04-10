@@ -1,4 +1,5 @@
 #include "Poker.h"
+#include "System.h"
 #include <windows.h>
 #include <iomanip>
 #include <ctime>
@@ -10,8 +11,8 @@
 
 using namespace std;
 
-// [보조 함수] 카드 위력 점수 (A=14, 스다하클 적용)
-// 스(3) > 다(2) > 하(1) > 클(0)
+extern vector<string> globalNamePool;
+
 int GetCardScore(int rank, int suit) {
     int power = (rank == 1) ? 14 : rank;
     int score = power * 10;
@@ -22,37 +23,18 @@ int GetCardScore(int rank, int suit) {
     return score;
 }
 
-// 생성자
 Poker::Poker(int& playerMoney) : playerRef(playerMoney), pot(0), currentBet(0) {
-    srand((unsigned int)time(NULL));
     players.clear();
-
-    // 요청하신 이름 리스트 그대로 유지
-    vector<string> namePool = {
-        "민지", "학진", "재용", "라이덴 쇼군", "서연", "규찬", "미토마", "이강인",
-        "나카노 미쿠", "카인", "선바", "선우", "유현", "정우", "세현", "동현",
-        "영환", "프리렌", "나카노 니노", "리쿠하치마 아루", "유린", "카프카",
-        "호두", "감우", "응광", "클레", "엘리스", "부현", "은랑", "스파클",
-        "시틀라리", "나히다", "마비카", "닐루", "유라 로렌스", "미소노 미카", "야란", "세진",
-        "푸리나", "청작", "아글라이아", "사이퍼", "카스토리스", "제레", "히아킨", "키레네",
-        "파이논", "아낙사", "마이데이", "야에 미코", "유메미즈키 미즈키", "치치", "타이나리",
-        "각청", "진", "바르카", "느비예트", "플린스", "두린", "니콜",
-        "호날두", "니코 오라일리", "아리마 카나", "쿠죠 아리사", "스오우 유키",
-        "키타가와 마린", "페른", "슈타르크", "아우라", "위벨"
-    };
+    players.push_back({ "나 (Player)", {}, playerRef, false });
 
     random_device rd;
     mt19937 g(rd());
-    std::shuffle(namePool.begin(), namePool.end(), g);
+    vector<string> tempPool = globalNamePool;
+    shuffle(tempPool.begin(), tempPool.end(), g);
 
-    // AI 기본금: 판돈 설정에 대응하기 위해 10,000달러로 설정
-    int initialBuyIn = 10000;
-
-    players.push_back({ "나 (Player)", {}, playerRef, false });
     for (int i = 0; i < 3; i++) {
-        players.push_back({ "AI " + to_string(i + 1) + " (" + namePool[i] + ")", {}, initialBuyIn, false });
+        players.push_back({ tempPool[i], {}, 100000, false });
     }
-
     initDeck();
 }
 
@@ -77,26 +59,24 @@ string Poker::GetRankStr(int rank) {
     return to_string(rank);
 }
 
-// 상세 족보 이름 생성 (예: "3 6 투 페어")
 string Poker::GetDetailedRankName(vector<PokerCard>& hand) {
+    if (hand.empty()) return "";
     int counts[15] = { 0 };
     for (auto& c : hand) counts[c.rank]++;
-    vector<int> fours, triples, pairs, singles;
+    vector<int> fours, triples, pairs;
     int priority[] = { 1, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2 };
 
     for (int r : priority) {
         if (counts[r] == 4) fours.push_back(r);
         else if (counts[r] == 3) triples.push_back(r);
         else if (counts[r] == 2) pairs.push_back(r);
-        else if (counts[r] == 1) singles.push_back(r);
     }
 
     if (!fours.empty()) return GetRankStr(fours[0]) + " 포카드";
-    if (!triples.empty() && !pairs.empty()) return GetRankStr(triples[0]) + " " + GetRankStr(pairs[0]) + " 풀하우스";
+    if (!triples.empty() && !pairs.empty()) return GetRankStr(triples[0]) + " 풀하우스";
     if (!triples.empty()) return GetRankStr(triples[0]) + " 트리플";
     if (pairs.size() >= 2) return GetRankStr(pairs[0]) + " " + GetRankStr(pairs[1]) + " 투 페어";
     if (pairs.size() == 1) return GetRankStr(pairs[0]) + " 원 페어";
-    if (!singles.empty()) return GetRankStr(singles[0]);
     return "하이 카드";
 }
 
@@ -104,7 +84,7 @@ void Poker::showTable(bool revealAll) {
     system("cls");
     SetColor(14);
     cout << "==========================================================" << endl;
-    cout << "                [ 4인 포커 대결 모드 ]                    " << endl;
+    cout << "                [ 4인 포커 - 5카드 하이 ]                " << endl;
     cout << "          현재 총 판돈(POT): " << pot << " 달러" << endl;
     cout << "==========================================================" << endl;
     SetColor(15);
@@ -112,11 +92,11 @@ void Poker::showTable(bool revealAll) {
     for (int i = 0; i < (int)players.size(); i++) {
         if (players[i].isFolded) {
             SetColor(8);
-            cout << left << setw(25) << players[i].name << " : [ 기권(FOLDED) ]" << endl;
+            cout << left << setw(20) << players[i].name << " : [ 기권(FOLDED) ]" << endl;
         }
         else {
             SetColor(i == 0 ? 11 : 15);
-            cout << left << setw(25) << players[i].name << " : ";
+            cout << left << setw(20) << players[i].name << " : ";
             for (auto& card : players[i].hand) {
                 if (i == 0 || revealAll) {
                     string s_mark;
@@ -129,8 +109,8 @@ void Poker::showTable(bool revealAll) {
                 }
                 else cout << "?? ";
             }
-            cout << " (잔고: " << players[i].money << "$)";
-            if (i == 0 || revealAll) {
+            cout << " (잔고: " << (i == 0 ? playerRef : players[i].money) << "$)";
+            if ((i == 0 || revealAll) && !players[i].hand.empty()) {
                 SetColor(10);
                 cout << " (" << GetDetailedRankName(players[i].hand) << ")";
             }
@@ -144,98 +124,138 @@ void Poker::showTable(bool revealAll) {
 void Poker::play() {
     system("cls");
     SetColor(11);
-    cout << "\n  [ 포커 게임 설정 ]" << endl;
+    cout << "\n  [ 포커 테이블 입장 ]" << endl;
     SetColor(15);
-    cout << "  기본 베팅 단위를 선택하세요." << endl;
-    cout << "  1. 50$  |  2. 100$  |  3. 200$  |  4. 500$" << endl;
-    cout << "  선택: ";
+    cout << "  베팅 단위: 1. 1,000 | 2. 5,000 | 3. 10,000 | 4. 20,000\n  선택: ";
 
-    int menu, baseBet = 100;
+    int menu, baseBet = 5000;
     cin >> menu;
-    if (menu == 1) baseBet = 50;
-    else if (menu == 2) baseBet = 100;
-    else if (menu == 3) baseBet = 200;
-    else if (menu == 4) baseBet = 500;
+    if (menu == 1) baseBet = 1000;
+    else if (menu == 2) baseBet = 5000;
+    else if (menu == 3) baseBet = 10000;
+    else if (menu == 4) baseBet = 20000;
 
-    int ante = baseBet / 2;
-    currentBet = baseBet;
+    random_device rd;
+    mt19937 g(rd());
+    uniform_int_distribution<int> dist(0, (int)globalNamePool.size() - 1);
 
-    shuffleDeck();
-    int deckIdx = 0;
-    pot = 0;
+    while (true) {
+        if (playerRef < baseBet) {
+            system("cls");
+            SetColor(12);
+            cout << "\n [!] 자산 부족으로 퇴장당했습니다." << endl;
+            Sleep(1500); return;
+        }
 
-    for (auto& p : players) {
-        p.money -= ante;
-        pot += ante;
-        p.hand.clear();
-        p.isFolded = false;
+        for (int i = 1; i < (int)players.size(); i++) {
+            if (players[i].money < baseBet) {
+                SetColor(11);
+                string newName = globalNamePool[dist(g)];
+                cout << "\n [!] " << players[i].name << " 파산! [" << newName << "] 입장!" << endl;
+                players[i].name = newName;
+                players[i].money = 100000;
+                Sleep(1000);
+            }
+        }
+
+        int ante = baseBet / 2;
+        currentBet = 0;
+        initDeck();
+        shuffleDeck();
+        int deckIdx = 0;
+        pot = 0;
+
+        for (int i = 0; i < (int)players.size(); i++) {
+            int& m = (i == 0) ? playerRef : players[i].money;
+            m -= ante; pot += ante;
+            players[i].hand.clear();
+            players[i].isFolded = false;
+        }
+
+        // 1. 초기 2장 배분
+        for (int i = 0; i < 2; i++) {
+            for (auto& p : players) p.hand.push_back(deck[deckIdx++]);
+        }
+
+        // 2. 4번의 베팅 라운드 (2->3->4->5장 순서)
+        for (int round = 1; round <= 4; round++) {
+            showTable(false);
+            bettingRound();
+
+            int active = 0;
+            for (auto& p : players) if (!p.isFolded) active++;
+            if (active <= 1) break;
+
+            if (round < 4) {
+                cout << "\n [ " << round + 2 << "번째 카드를 배분합니다... ]" << endl;
+                Sleep(800);
+                for (auto& p : players) {
+                    if (!p.isFolded) p.hand.push_back(deck[deckIdx++]);
+                }
+            }
+            else {
+                cout << "\n 모든 카드가 배분되었습니다. 결과를 확인하려면 아무 키나 누르세요..." << endl;
+                _getch();
+            }
+        }
+
+        showTable(true);
+        int winnerIdx = evaluateWinner();
+
+        SetColor(10);
+        cout << "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" << endl;
+        cout << " 승자: " << players[winnerIdx].name << endl;
+        cout << " 결과: " << GetDetailedRankName(players[winnerIdx].hand) << endl;
+        cout << " 상금: " << pot << "$" << endl;
+        cout << "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" << endl;
+
+        if (winnerIdx == 0) playerRef += pot;
+        else players[winnerIdx].money += pot;
+
+        SetColor(15);
+        cout << "\n [1] 계속 [0] 퇴장 : ";
+        int cont; cin >> cont;
+        if (cont == 0) break;
     }
-
-    for (int i = 0; i < 2; i++) {
-        for (auto& p : players) p.hand.push_back(deck[deckIdx++]);
-    }
-
-    for (int round = 1; round <= 3; round++) {
-        showTable(false);
-        bettingRound();
-
-        int active = 0;
-        for (auto& p : players) if (!p.isFolded) active++;
-        if (active <= 1) break;
-
-        cout << "\n[" << round << "회차 카드 배분 중...]" << endl;
-        Sleep(800);
-        for (auto& p : players) if (!p.isFolded) p.hand.push_back(deck[deckIdx++]);
-    }
-
-    showTable(true);
-    int winnerIdx = evaluateWinner();
-
-    SetColor(10);
-    cout << "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" << endl;
-    cout << " 승자: " << players[winnerIdx].name << endl;
-    cout << " 결과: " << GetDetailedRankName(players[winnerIdx].hand) << endl;
-    cout << " 상금: " << pot << "$" << endl;
-    cout << "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" << endl;
-
-    players[winnerIdx].money += pot;
-    playerRef = players[0].money;
-
-    SetColor(15);
-    system("pause");
 }
 
 bool Poker::bettingRound() {
     for (int i = 0; i < (int)players.size(); i++) {
-        if (players[i].isFolded || players[i].money <= 0) continue;
-
+        if (players[i].isFolded) continue;
         if (i == 0) {
             int halfBet = pot / 2;
-            cout << "\n[1] 콜(" << currentBet << "$) [2] 하프(" << halfBet << "$) [3] 다이: ";
+            cout << "\n베팅 (현재 베팅액: " << currentBet << "$)";
+            cout << "\n[1]콜/체크 [2]하프(" << halfBet << ") [3]올인 [4]다이 : ";
             int choice; cin >> choice;
             if (choice == 2) {
-                players[i].money -= halfBet; pot += halfBet; currentBet = halfBet;
+                int betAmount = (playerRef < halfBet) ? playerRef : halfBet;
+                playerRef -= betAmount; pot += betAmount; currentBet = betAmount;
             }
             else if (choice == 3) {
-                players[i].isFolded = true;
+                pot += playerRef; currentBet += playerRef; playerRef = 0;
             }
+            else if (choice == 4) players[i].isFolded = true;
             else {
-                players[i].money -= currentBet; pot += currentBet;
+                int pay = (currentBet > playerRef) ? playerRef : currentBet;
+                playerRef -= pay; pot += pay;
             }
         }
         else {
-            cout << players[i].name << " 생각 중..."; Sleep(600);
+            cout << players[i].name << " 생각 중..."; Sleep(500);
             HandRank aiRank = checkHandForPlayer(players[i].hand);
             int prob = rand() % 100;
-            if (aiRank == HandRank::HIGH_CARD && prob < 40) {
+
+            if (currentBet > players[i].money * 0.4 && aiRank < HandRank::ONE_PAIR) {
                 players[i].isFolded = true; cout << " [다이]" << endl;
             }
-            else if (aiRank >= HandRank::TWO_PAIR && prob < 20) {
-                int halfBet = pot / 2;
-                players[i].money -= halfBet; pot += halfBet; currentBet = halfBet; cout << " [하프!!]" << endl;
+            else if (aiRank >= HandRank::THREE_OF_A_KIND && prob < 30) {
+                cout << " [올인]" << endl;
+                pot += players[i].money; currentBet += players[i].money; players[i].money = 0;
             }
             else {
-                players[i].money -= currentBet; pot += currentBet; cout << " [콜]" << endl;
+                int pay = (currentBet > players[i].money) ? players[i].money : currentBet;
+                players[i].money -= pay; pot += pay;
+                cout << (currentBet == 0 ? " [체크]" : " [콜]") << endl;
             }
         }
     }
@@ -243,10 +263,11 @@ bool Poker::bettingRound() {
 }
 
 HandRank Poker::checkHandForPlayer(vector<PokerCard>& hand) {
+    if (hand.empty()) return HandRank::HIGH_CARD;
     int counts[15] = { 0 };
     for (auto& c : hand) counts[c.rank]++;
     int pairs = 0, triples = 0, fours = 0;
-    for (int i = 1; i <= 13; i++) {
+    for (int i = 1; i <= 14; i++) {
         if (counts[i] == 4) fours++;
         else if (counts[i] == 3) triples++;
         else if (counts[i] == 2) pairs++;
@@ -260,8 +281,8 @@ HandRank Poker::checkHandForPlayer(vector<PokerCard>& hand) {
 }
 
 int Poker::evaluateWinner() {
-    int winnerIdx = 0;
-    HandRank bestRank = HandRank::HIGH_CARD;
+    int winnerIdx = -1;
+    HandRank bestRank = (HandRank)-1;
     int bestHighCardScore = -1;
 
     for (int i = 0; i < (int)players.size(); i++) {
@@ -272,8 +293,7 @@ int Poker::evaluateWinner() {
             int s = GetCardScore(c.rank, c.suit);
             if (s > currentMaxScore) currentMaxScore = s;
         }
-
-        if (currentRank > bestRank) {
+        if (winnerIdx == -1 || (int)currentRank > (int)bestRank) {
             bestRank = currentRank;
             winnerIdx = i;
             bestHighCardScore = currentMaxScore;
@@ -285,5 +305,5 @@ int Poker::evaluateWinner() {
             }
         }
     }
-    return winnerIdx;
+    return (winnerIdx == -1) ? 0 : winnerIdx;
 }

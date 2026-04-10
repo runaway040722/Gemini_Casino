@@ -1,11 +1,12 @@
-#pragma once
+#ifndef INDIAN_POKER_H
+#define INDIAN_POKER_H
+
 #include <vector>
 #include <string>
 
-// 타 게임과 충돌 방지를 위한 고유 구조체명
 struct IndianCard {
-    int suit; // 0:♠, 1:◆, 2:♥, 3:♣
-    int rank; // 2 ~ 10
+    int suit;
+    int rank;
 };
 
 struct IndianPlayer {
@@ -17,18 +18,19 @@ struct IndianPlayer {
 
 class IndianPoker {
 private:
-    std::vector<IndianCard> deck;
     std::vector<IndianPlayer> players;
-    int& playerRef; // 메인 자산 연동
+    std::vector<IndianCard> deck;
+    int& playerRef;
     int pot;
+    int currentDeckIdx; // <-- 이 줄이 누락되어 에러가 난 것입니다.
 
 public:
     IndianPoker(int& money);
-    void Play();
-
-private:
     void InitDeck();
+    void Play();
     void ShowTable(bool revealPlayerCard);
     int EvaluateWinner();
     std::string GetCardStr(IndianCard c);
 };
+
+#endif
