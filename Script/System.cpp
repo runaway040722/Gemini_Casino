@@ -7,10 +7,11 @@
 #include <iostream>
 #include <random>
 #include <algorithm>
+#include <limits>
 
 using namespace std;
 
-// --- NPC 이름 풀 정의 ---
+// --- [NPC 이름 풀 정의] ---
 vector<string> globalNamePool = {
     "민지", "학진", "재용", "라이덴", "서연", "규찬", "미토마", "이강인",
     "미쿠", "카인", "선바", "선우", "유현", "정우", "세현", "동현",
@@ -36,7 +37,7 @@ vector<string> globalNamePool = {
     "콜롬비나", "소"
 };
 
-// --- 유틸리티 함수 ---
+// --- [공통 유틸리티 함수] ---
 void gotoxy(int x, int y) {
     COORD pos = { (SHORT)x, (SHORT)y };
     SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), pos);
@@ -49,18 +50,83 @@ void SetColor(int color) {
 void FlushBuffer() {
     while (_kbhit()) (void)_getch();
     cin.clear();
+    cin.ignore((numeric_limits<streamsize>::max)(), '\n');
 }
 
 void ClearBuffer() {
-    while (_kbhit()) (void)_getch();
     cin.clear();
-    if (cin.rdbuf()->in_avail()) cin.ignore(1000, '\n');
+    while (_kbhit()) (void)_getch();
+    cin.ignore((numeric_limits<streamsize>::max)(), '\n');
     SetColor(14);
     cout << "\n [아무 키나 누르면 메뉴로 돌아갑니다]";
     (void)_getch();
 }
 
-// --- 광산 연출 함수 (텍스트 절대 보존) ---
+// --- [베팅 및 결과 출력 함수] ---
+int GetBetAmount(int currentMoney) {
+    string input;
+    int bet;
+
+    while (true) {
+        SetColor(15);
+        cout << "\n [ 베팅 단계 ] 현재 자산: " << currentMoney << "$" << endl;
+        cout << " 베팅 금액을 입력하세요 (전액 올인은 'a' 입력) : ";
+
+        cin >> input; // 문자열로 입력을 받음
+
+        // 1. 올인 기능 처리 ('a' 또는 'A' 입력 시)
+        if (input == "a" || input == "A") {
+            SetColor(11);
+            cout << " [!] 전액 올인을 선택하셨습니다! 베팅 금액: " << currentMoney << "$" << endl;
+            Sleep(800);
+            return currentMoney;
+        }
+
+        // 2. 숫자 입력 처리
+        try {
+            bet = stoi(input); // 문자열을 숫자로 변환
+        }
+        catch (...) {
+            SetColor(12);
+            cout << " [!] 잘못된 입력입니다. 숫자나 'a'를 입력하세요." << endl;
+            continue;
+        }
+
+        // 3. 금액 유효성 검사
+        if (bet <= 0) {
+            SetColor(12);
+            cout << " [!] 0보다 큰 금액을 베팅해야 합니다." << endl;
+            continue;
+        }
+        if (bet > currentMoney) {
+            SetColor(12);
+            cout << " [!] 보유 금액보다 많이 베팅할 수 없습니다." << endl;
+            continue;
+        }
+
+        return bet; // 정상적인 숫자 베팅 반환
+    }
+}
+
+void PrintResult(int& money, int bet, int winAmount) {
+    if (winAmount > 0) {
+        SetColor(10);
+        cout << "\n ==========================================" << endl;
+        cout << " [★] 승리! " << winAmount << "$를 획득했습니다!" << endl;
+        cout << " ==========================================" << endl;
+        money += winAmount;
+    }
+    else {
+        SetColor(12);
+        cout << "\n ==========================================" << endl;
+        cout << " [!] 패배... " << bet << "$를 잃었습니다." << endl;
+        cout << " ==========================================" << endl;
+        money -= bet;
+    }
+    Sleep(1000);
+}
+
+// --- [광산 연출 함수] ---
 void DragToMine(const std::string& name, bool isPlayer) {
     system("cls");
     SetColor(12);
@@ -80,8 +146,7 @@ void DragToMine(const std::string& name, bool isPlayer) {
         cout << " [!] (질질 끌려가는 소리... 깡... 깡...)" << endl; Sleep(2000);
         cout << " [!] (철창문이 닫히는 소리... 쾅!)" << endl; Sleep(1500);
         SetColor(12);
-        cout << "\n [!] 당신은 이제 빛이 들지 않는 막장의 '번호'가 되었습니다." << endl;
-        cout << " [!] [GAME OVER - 평생 채굴형]" << endl; Sleep(3000);
+        cout << " [!] [광산으로 끌려갑니다.]" << endl; Sleep(1500);
     }
     else {
         string aiLines[] = {
@@ -123,7 +188,7 @@ void DragToMine(const std::string& name, bool isPlayer) {
     }
 }
 
-// --- 파산 판단 (여기에 게임 로직을 넣지 않고 판단만 수행) ---
+// --- [기타 공통 로직] ---
 bool CheckBankruptcy(const std::string& name, int& money, int threshold, bool isPlayer) {
     if (money < threshold) {
         DragToMine(name, isPlayer);
@@ -132,16 +197,6 @@ bool CheckBankruptcy(const std::string& name, int& money, int threshold, bool is
     return false;
 }
 
-int GetBetAmount(int currentMoney) {
-    // 베팅 금액 입력 로직이 필요하다면 여기에 작성
-    return 0;
-}
-
-void PrintResult(int& money, int pot, int resultType) {
-    // 결과 출력 로직이 필요하다면 여기에 작성
-}
-
-// --- 로그 출력 ---
 void PrintActionLog(string name, string action, int color) {
     SetColor(15);
     cout << " [!] " << left << setw(15) << name << " : ";

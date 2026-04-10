@@ -1,5 +1,5 @@
 #include "TexasHoldem.h"
-#include "System.h"  // 모든 시스템 함수 호출용
+#include "System.h"
 #include <iostream>
 #include <vector>
 #include <string>
@@ -46,7 +46,7 @@ void PrintCard(int suit, int rank) {
     cout << s << rStr << " ";
 }
 
-// --- [TexasHoldem 클래스 구현] ---
+// --- [핵심 로직 구현] ---
 
 void TexasHoldem::initDeck() {
     deck.clear();
@@ -104,7 +104,7 @@ void TexasHoldem::Play() {
     SetColor(11);
     cout << "\n\n          [ 텍사스 홀덤 입장 ]" << endl;
     cout << "          1.초보(1k) 2.일반(5k) 3.고수(10k) 4.메이저(20k)" << endl;
-    cout << "\n           선택: ";
+    cout << "\n            선택: ";
     int menu, baseBet; cin >> menu;
     if (menu == 1) baseBet = 1000;
     else if (menu == 3) baseBet = 10000;
@@ -114,23 +114,22 @@ void TexasHoldem::Play() {
     vector<THPlayer> players;
     players.push_back({ "나 (플레이어)", {}, playerMoney, false, false, 0 });
 
-    random_device rd; mt19937 g(rd());
-    vector<string> pool = globalNamePool;
-    shuffle(pool.begin(), pool.end(), g);
-    for (int i = 0; i < 3; i++) players.push_back({ pool[i], {}, 100000, false, false, 0 });
+    for (int i = 0; i < 3; i++) {
+        players.push_back({ globalNamePool[rand() % globalNamePool.size()], {}, 100000, false, false, 0 });
+    }
 
     while (true) {
-        // [중요] 게임 시작 전 본인 파산 체크
         if (CheckBankruptcy(players[0].name, playerMoney, baseBet, true)) return;
 
         initDeck(); shuffleDeck(); communityCards.clear();
         int pot = 0; int dIdx = 0;
+
         for (auto& p : players) {
             p.hand.clear(); p.isFolded = false; p.isAllIn = false; p.totalBetThisRound = 0;
             p.hand.push_back(deck[dIdx++]); p.hand.push_back(deck[dIdx++]);
         }
 
-        const char* stage[] = { "프리플랍", "플랍", "턴", "리버" };
+        const char* stageNames[] = { "프리플랍", "플랍", "턴", "리버" };
         for (int sIdx = 0; sIdx < 4; sIdx++) {
             if (sIdx == 1) for (int i = 0; i < 3; i++) communityCards.push_back(deck[dIdx++]);
             else if (sIdx > 1) communityCards.push_back(deck[dIdx++]);
@@ -138,29 +137,49 @@ void TexasHoldem::Play() {
             for (auto& p : players) p.totalBetThisRound = 0;
             int currentCall = (sIdx == 0 ? baseBet : 0);
 
+            // 앤티 자동 지불
             if (sIdx == 0) {
-                for (auto& p : players) {
-                    int pAmt = (p.name == "나 (플레이어)" ? playerMoney : p.money);
-                    int ante = min(pAmt, baseBet);
-                    if (p.name == "나 (플레이어)") playerMoney -= ante; else p.money -= ante;
-                    pot += ante; p.totalBetThisRound = ante;
-                    if ((p.name == "나 (플레이어)" ? playerMoney : p.money) <= 0) p.isAllIn = true;
+                for (int i = 0; i < (int)players.size(); i++) {
+                    int& curM = (i == 0 ? playerMoney : players[i].money);
+                    int ante = min(curM, baseBet);
+                    curM -= ante; pot += ante;
+                    players[i].totalBetThisRound = ante;
+                    if (curM <= 0) players[i].isAllIn = true;
                 }
             }
 
-            bool bettingFinished = false;
             vector<bool> hasActed(players.size(), false);
+            int currentTurn = 0;
 
-            while (!bettingFinished) {
-                bettingFinished = true;
+            while (true) {
+                bool allMatched = true;
+                int activeCount = 0; int playingCount = 0;
+
+                for (int i = 0; i < (int)players.size(); i++) {
+                    if (players[i].isFolded) continue;
+                    playingCount++;
+                    if (!players[i].isAllIn) {
+                        activeCount++;
+                        if (!hasActed[i] || players[i].totalBetThisRound < currentCall) allMatched = false;
+                    }
+                }
+
+                if (allMatched || playingCount <= 1 || activeCount == 0) break;
+
+                int i = currentTurn;
+                if (players[i].isFolded || players[i].isAllIn) {
+                    currentTurn = (currentTurn + 1) % players.size();
+                    continue;
+                }
+
                 system("cls");
-                SetColor(14); cout << "\n==================== [ " << stage[sIdx] << " ] ====================" << endl;
+                SetColor(14); cout << "\n==================== [ " << stageNames[sIdx] << " ] ====================" << endl;
                 cout << " 현재 판돈(Pot): " << pot << " | 콜 금액: " << currentCall << endl;
                 cout << " 공용 카드: "; for (auto& c : communityCards) PrintCard(c.suit, c.rank);
                 cout << "\n----------------------------------------------------------" << endl;
                 for (int j = 0; j < (int)players.size(); j++) {
                     SetColor(j == 0 ? 11 : 15);
-                    cout << (j == 0 ? "> " : "  ") << left << setw(15) << players[j].name;
+                    cout << (j == i ? "▶ " : "  ") << left << setw(15) << players[j].name;
                     if (players[j].isFolded) cout << "[F] 다이";
                     else if (players[j].isAllIn) cout << "[A] 올인";
                     else cout << "잔액: " << (j == 0 ? playerMoney : players[j].money);
@@ -168,81 +187,86 @@ void TexasHoldem::Play() {
                 }
                 SetColor(10); cout << "\n [내 핸드]: "; for (auto& c : players[0].hand) PrintCard(c.suit, c.rank);
                 cout << "(" << GetDetailedHandName(evaluateHand(players[0].hand, communityCards)) << ")" << endl;
-                SetColor(14); cout << "----------------------------------------------------------\n" << endl;
 
-                for (int i = 0; i < (int)players.size(); i++) {
-                    if (players[i].isFolded || players[i].isAllIn) continue;
-                    int amountNeeded = currentCall - players[i].totalBetThisRound;
-                    if (amountNeeded <= 0 && hasActed[i]) continue;
+                int amountNeeded = currentCall - players[i].totalBetThisRound;
 
-                    if (i == 0) { // 플레이어
-                        SetColor(11); cout << " >> 내 차례 (콜 금액: " << (amountNeeded > 0 ? amountNeeded : 0) << ")" << endl;
-                        cout << " [1]콜 [2]레이즈 [3]올인 [4]다이 : ";
-                        int choice; cin >> choice;
-                        if (choice == 1) {
-                            int bet = min(playerMoney, amountNeeded);
-                            playerMoney -= bet; pot += bet; players[i].totalBetThisRound += bet;
-                            if (playerMoney <= 0) players[i].isAllIn = true;
+                if (i == 0) { // [플레이어]
+                    while (_kbhit()) _getch();
+                    SetColor(11); cout << "\n >> 내 차례 (필요액: " << (amountNeeded > 0 ? amountNeeded : 0) << ")" << endl;
+                    cout << " [1]콜 [2]레이즈 [3]올인 [4]다이 : ";
+                    int choice; cin >> choice;
+
+                    if (choice == 1) {
+                        int bet = min(playerMoney, amountNeeded);
+                        playerMoney -= bet; pot += bet; players[i].totalBetThisRound += bet;
+                        if (playerMoney <= 0) players[i].isAllIn = true;
+                    }
+                    else if (choice == 2) {
+                        int rAmount; cout << " 추가 레이즈액: "; cin >> rAmount;
+                        int maxOp = 0;
+                        for (int j = 1; j < (int)players.size(); j++) {
+                            if (!players[j].isFolded) maxOp = max(maxOp, players[j].money + players[j].totalBetThisRound);
                         }
-                        else if (choice == 2) {
-                            int rAmount; cout << " 추가 레이즈액: "; cin >> rAmount;
-                            int total = (amountNeeded > 0 ? amountNeeded : 0) + rAmount;
-                            if (total >= playerMoney) { total = playerMoney; players[i].isAllIn = true; }
-                            playerMoney -= total; pot += total; players[i].totalBetThisRound += total;
+                        int needed = (amountNeeded > 0 ? amountNeeded : 0) + rAmount;
+                        if (players[i].totalBetThisRound + needed > maxOp) needed = maxOp - players[i].totalBetThisRound;
+
+                        int finalBet = min(playerMoney, max(0, needed));
+                        playerMoney -= finalBet; pot += finalBet; players[i].totalBetThisRound += finalBet;
+                        if (playerMoney <= 0 || players[i].totalBetThisRound >= maxOp) players[i].isAllIn = true;
+
+                        if (players[i].totalBetThisRound > currentCall) {
                             currentCall = players[i].totalBetThisRound;
-                            fill(hasActed.begin(), hasActed.end(), false); bettingFinished = false;
-                        }
-                        else if (choice == 3) {
-                            int total = playerMoney; playerMoney = 0; pot += total;
-                            players[i].totalBetThisRound += total; players[i].isAllIn = true;
-                            if (players[i].totalBetThisRound > currentCall) {
-                                currentCall = players[i].totalBetThisRound;
-                                fill(hasActed.begin(), hasActed.end(), false); bettingFinished = false;
-                            }
-                        }
-                        else players[i].isFolded = true;
-                    }
-                    else { // AI
-                        long long aiS = evaluateHand(players[i].hand, communityCards);
-                        if (amountNeeded > 0 && aiS < 2000000LL && (rand() % 100 < 30)) {
-                            players[i].isFolded = true;
-                            PrintActionLog(players[i].name, "다이(Fold)", 8);
-                        }
-                        else if (aiS >= 4000000LL && (rand() % 100 < 15)) {
-                            int raise = baseBet;
-                            int total = amountNeeded + raise;
-                            if (players[i].money <= total) {
-                                int all = players[i].money; players[i].money = 0; pot += all;
-                                players[i].totalBetThisRound += all; players[i].isAllIn = true;
-                                if (players[i].totalBetThisRound > currentCall) { currentCall = players[i].totalBetThisRound; fill(hasActed.begin(), hasActed.end(), false); bettingFinished = false; }
-                                PrintActionLog(players[i].name, "전 재산 올인!!", 12);
-                            }
-                            else {
-                                players[i].money -= total; pot += total; players[i].totalBetThisRound += total;
-                                currentCall = players[i].totalBetThisRound;
-                                fill(hasActed.begin(), hasActed.end(), false); bettingFinished = false;
-                                PrintActionLog(players[i].name, "레이즈!", 14);
-                            }
-                        }
-                        else {
-                            int bet = min(players[i].money, (amountNeeded > 0 ? amountNeeded : 0));
-                            players[i].money -= bet; pot += bet; players[i].totalBetThisRound += bet;
-                            if (players[i].money <= 0) players[i].isAllIn = true;
-                            PrintActionLog(players[i].name, (amountNeeded <= 0 ? "체크(Check)" : "콜(Call)"), 10);
+                            for (int k = 0; k < players.size(); k++) if (!players[k].isFolded) hasActed[k] = false;
                         }
                     }
+                    else if (choice == 3) { // [전략적 올인]
+                        int maxOp = 0;
+                        for (int j = 1; j < (int)players.size(); j++) {
+                            if (!players[j].isFolded) maxOp = max(maxOp, players[j].money + players[j].totalBetThisRound);
+                        }
+                        int needed = maxOp - players[i].totalBetThisRound;
+                        int finalBet = min(playerMoney, max(amountNeeded, needed));
+                        playerMoney -= finalBet; pot += finalBet; players[i].totalBetThisRound += finalBet;
+                        players[i].isAllIn = true;
+
+                        if (players[i].totalBetThisRound > currentCall) {
+                            currentCall = players[i].totalBetThisRound;
+                            for (int k = 0; k < players.size(); k++) if (!players[k].isFolded) hasActed[k] = false;
+                        }
+                    }
+                    else players[i].isFolded = true;
                     hasActed[i] = true;
                 }
+                else { // [AI]
+                    long long aiS = evaluateHand(players[i].hand, communityCards);
+                    int bluff = rand() % 100;
+                    if (amountNeeded > 0) {
+                        if (aiS >= 2000000LL || (aiS >= 1000000LL && bluff < 30)) {
+                            int bet = min(players[i].money, amountNeeded);
+                            players[i].money -= bet; pot += bet; players[i].totalBetThisRound += bet;
+                            if (players[i].money <= 0) players[i].isAllIn = true;
+                            PrintActionLog(players[i].name, (players[i].isAllIn ? "올인 콜!" : "콜(Call)"), 10);
+                        }
+                        else {
+                            players[i].isFolded = true; PrintActionLog(players[i].name, "다이(Fold)", 8);
+                        }
+                    }
+                    else {
+                        PrintActionLog(players[i].name, "체크(Check)", 10);
+                    }
+                    hasActed[i] = true;
+                    Sleep(800);
+                }
+                currentTurn = (currentTurn + 1) % players.size();
             }
             if (count_if(players.begin(), players.end(), [](const THPlayer& p) {return !p.isFolded; }) <= 1) break;
         }
 
-        // --- 쇼다운 및 정산 ---
+        // 쇼다운
         system("cls");
-        SetColor(14); cout << "==================== [ 최종 쇼다운 결과 ] ====================" << endl;
+        SetColor(14); cout << "==================== [ 최종 결과 ] ====================" << endl;
         cout << " [ 공 유 카 드 ] : "; for (auto& c : communityCards) PrintCard(c.suit, c.rank);
         cout << "\n--------------------------------------------------------------" << endl;
-
         int winIdx = -1; long long bestS = -1;
         for (int i = 0; i < (int)players.size(); i++) {
             if (players[i].isFolded) { SetColor(8); cout << " [" << left << setw(15) << players[i].name << "]: (다이)" << endl; continue; }
@@ -252,33 +276,20 @@ void TexasHoldem::Play() {
             SetColor(13); cout << " -> " << GetDetailedHandName(s) << endl;
             if (s > bestS) { bestS = s; winIdx = i; }
         }
-
         if (winIdx != -1) {
-            SetColor(10); cout << "\n ★ 승자: " << players[winIdx].name << " [" << pot << " 획득!]" << endl;
+            SetColor(10); cout << "\n ★ 승자: " << players[winIdx].name << " [$" << pot << " 획득!]" << endl;
             if (winIdx == 0) playerMoney += pot; else players[winIdx].money += pot;
         }
-        SetColor(15); cout << " [!] 결과를 확인하셨으면 아무 키나 누르세요..."; _getch();
 
-        // --- [핵심] 모든 플레이어 파산 체크 및 AI 대체 ---
-        for (int i = 0; i < (int)players.size(); i++) {
-            bool isP = (i == 0);
-            int& curM = (isP ? playerMoney : players[i].money);
+        SetColor(15); cout << "\n [!] Enter: 다음 판 / 0: 종료";
+        int next = _getch();
+        if (next == '0') break;
 
-            if (CheckBankruptcy(players[i].name, curM, baseBet, isP)) {
-                if (isP) return; // 나(플레이어)라면 함수 종료(광산행)
-
-                // AI 캐릭터 교체 로직
-                shuffle(globalNamePool.begin(), globalNamePool.end(), g);
-                players[i].name = globalNamePool[0];
+        for (int i = 1; i < (int)players.size(); i++) {
+            if (players[i].money <= 0) {
+                players[i].name = globalNamePool[rand() % globalNamePool.size()];
                 players[i].money = 100000;
-                players[i].isFolded = false;
-                players[i].isAllIn = false;
-
-                SetColor(11);
-                cout << "\n [!] 새로운 도전자 '" << players[i].name << "' 님이 착석했습니다." << endl;
-                Sleep(1000);
             }
         }
-        SetColor(15); cout << "\n [1]계속 [0]종료 : "; int c; cin >> c; if (c == 0) break;
     }
 }

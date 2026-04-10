@@ -7,18 +7,14 @@
 
 using namespace std;
 
-// [1] 생성자
-Mine::Mine(int& playerMoney) : playerRef(playerMoney) {
-}
+Mine::Mine(int& playerMoney) : playerRef(playerMoney) {}
 
-// [2] 광산 실행 함수
 void Mine::StartMining() {
     ::system("cls");
-
-    srand((unsigned)time(NULL)); // ?? 난수 초기화
+    srand((unsigned)time(NULL));
 
     int minedAmount = 0;
-    const int targetAmount = 1000;
+    const int targetAmount = 100000; // 목표 상향
 
     SetColor(12);
     cout << " [파산] 채무 이행을 위해 탄광으로 강제 압송되었습니다! " << endl;
@@ -33,6 +29,7 @@ void Mine::StartMining() {
     while (minedAmount < targetAmount) {
         gotoxy(0, 3);
         SetColor(10);
+        // 퍼센트 계산식 수정 (100을 곱함)
         cout << "  현재 채굴액: " << minedAmount << " $ ("
             << (minedAmount * 100 / targetAmount) << "%)    " << endl;
 
@@ -45,15 +42,12 @@ void Mine::StartMining() {
 
         SetColor(15);
         gotoxy(0, charY + 5);
-        cout << " [1] 곡괭이질 하기 (대량 채굴) ";
+        cout << " [1] 곡괭이질 하기 (노동) ";
 
         int choice = _getch();
-
-        // ?? 입력 버퍼 비우기 (핵심)
-        while (_kbhit()) _getch();
+        while (_kbhit()) _getch(); // 입력 버퍼 비우기
 
         if (choice == '1') {
-
             // 애니메이션 1
             gotoxy(charX, charY - 1); cout << "            ";
             gotoxy(charX, charY);     cout << "  O  /       ";
@@ -65,66 +59,58 @@ void Mine::StartMining() {
 
             // 애니메이션 2
             gotoxy(charX, charY - 1); cout << "            ";
-            gotoxy(charX, charY);     cout << "            ";
+            gotoxy(charX, charY);     cout << "             ";
             gotoxy(charX, charY + 1); cout << "  O __       ";
             gotoxy(charX, charY + 2); cout << " /|/  \\      ";
-            gotoxy(charX, charY + 3); cout << "  |    *     ";
+            gotoxy(charX, charY + 3); cout << "  |    * ";
             gotoxy(charX, charY + 4); cout << " / \\         ";
 
             gotoxy(0, charY + 6);
             SetColor(14);
             cout << " [ 콰과광!!! ]  ";
-
             Beep(600, 100);
 
-            int gain = rand() % 101 + 100;
+            // 채굴량: 5,000 ~ 15,000 사이로 랜덤 (너무 금방 끝나지 않게)
+            int gain = rand() % 10001 + 5000;
             minedAmount += gain;
 
             gotoxy(0, charY + 8);
             SetColor(15);
             cout << " >> " << gain << "$ 상당의 고순도 원석을 캤습니다!      ";
 
-            if (rand() % 5 == 0) {
-                int bonus = 200;
+            // 보너스 다이아몬드 (10% 확률)
+            if (rand() % 10 == 0) {
+                int bonus = 20000;
                 minedAmount += bonus;
                 SetColor(11);
                 gotoxy(0, charY + 9);
-                cout << " [전설!] 다이아몬드 발견!! (+" << bonus << "$)     ";
-                SetColor(15);
+                cout << " [전설!] 다이아몬드 발견!! (+" << bonus << "$)      ";
             }
             else {
                 gotoxy(0, charY + 9);
                 cout << "                                             ";
             }
-
-            Sleep(400);
-
+            Sleep(300);
             gotoxy(0, charY + 6); cout << "                     ";
         }
     }
 
     ::system("cls");
-
     SetColor(11);
     cout << "\n\n  ===============================================" << endl;
     cout << "              [ 채 무 이 행 완 료 ]" << endl;
     cout << "  ===============================================" << endl;
-
     SetColor(15);
-    cout << "\n  관리자: \"엄청난 실력이군! 약속대로 50000달러를 주지.\"" << endl;
+    cout << "\n  관리자: \"엄청난 실력이군! 약속대로 50,000달러를 주지.\"" << endl;
 
-    playerRef = 50000;
+    playerRef = 50000; // 부활 자금
 
     cout << "\n  아무 키나 누르면 카지노 메인으로 돌아갑니다...";
     _getch();
-
-    // ?? 여기서도 한 번 더 버퍼 제거 (안전)
     while (_kbhit()) _getch();
-
     ::system("cls");
 }
 
-// 외부 호출용
 void PlayMine(int& money) {
     Mine mineGame(money);
     mineGame.StartMining();

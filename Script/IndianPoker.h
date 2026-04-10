@@ -12,8 +12,9 @@ struct IndianCard {
 struct IndianPlayer {
     std::string name;
     IndianCard card;
-    int money;
+    int money;      // ★ 참조자(&) 제거! 일반 int로 변경
     bool isFolded;
+    int totalBet;
 };
 
 class IndianPoker {
@@ -32,7 +33,7 @@ public:
     int EvaluateWinner();
     std::string GetCardStr(IndianCard c);
 
-    // [추가] .cpp에서 구현한 AI 교체 함수를 여기에 선언해야 합니다.
+    // AI 교체 및 파산 체크 함수
     void CheckAndReplaceAI();
 };
 

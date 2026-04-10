@@ -13,12 +13,12 @@
 #include "TexasHoldem.h"
 #include "Mine.h"
 #include <limits>
+#include <climits> // INT_MAX 사용을 위해 필요
 
 using namespace std;
 
 void ShowMainMenu(int money) {
     system("cls");
-
     SetColor(14); // 금색
     cout << "  ##########################################################" << endl;
     cout << "  ##                                                      ##" << endl;
@@ -31,7 +31,7 @@ void ShowMainMenu(int money) {
     cout << "  ##              [ 대 박 기 원  카 지 노 ]               ##" << endl;
     cout << "  ##########################################################" << endl;
 
-    SetColor(11); // 청록색 구분선
+    SetColor(11); // 청록색
     cout << "  ----------------------------------------------------------" << endl;
     SetColor(15); // 흰색
     cout << "      [ 현재 보유 자산 : ";
@@ -56,7 +56,7 @@ void ShowMainMenu(int money) {
     cout << "      (11) 텍사스 홀덤" << endl;
 
     cout << endl;
-    SetColor(12); // 종료
+    SetColor(12); // 빨간색 (종료)
     cout << "      (0)  게임 종료" << endl;
 
     SetColor(11);
@@ -78,40 +78,80 @@ int main() {
 
         ShowMainMenu(money);
 
+        // 1. 메뉴 입력 시도
         if (!(cin >> choice)) {
-            FlushBuffer();
+            ClearBuffer();
             continue;
         }
 
-        switch (choice) {
-        case 1: PlaySlotMachine(money); break;
-        case 2: PlayBlackjack(money);   break;
-        case 3: PlayEvenOdd(money);     break;
-        case 4: PlayHorseRacing(money); break;
-        case 5: {
-            Poker pokerGame(money);
-            pokerGame.play();
-            break;
-        }
-        case 6: PlayUpDown(money); break;
-        case 7: PlayBombGame(money); break;
-        case 8: PlayNumberBaseball(money); break;
-        case 9: {
-            IndianPoker iPoker(money);
-            iPoker.Play();
-            break;
-        }
-        case 10: {
-            PopUpGame popGame(money); // playerMoney는 메인에서 관리하는 변수명에 맞게 수정
-            popGame.play();
-            break;
-        }
-        case 11: {
-            TexasHoldem holdem(money); // 텍사스 홀덤 실행
-            holdem.Play();
-            break;
-        }
-        case 99: {
+        // 2. 입력 후 버퍼에 남은 '엔터'키를 여기서 미리 제거 (중요!)
+        // 이 코드가 있어야 각 게임 진입 시 첫 입력이 씹히지 않습니다.
+        cin.ignore(INT_MAX, '\n');
+
+                switch (choice) {
+                case 1:
+                    system("cls"); // 화면을 싹 비우고 게임 시작
+                    PlaySlotMachine(money);
+                    break;
+
+                case 2:
+                    system("cls");
+                    PlayBlackjack(money);
+                    break;
+
+                case 3:
+                    system("cls");
+                    PlayEvenOdd(money);
+                    break;
+
+                case 4:
+                    system("cls");
+                    PlayHorseRacing(money);
+                    break;
+
+                case 5: {
+                    system("cls");
+                    Poker pokerGame(money);
+                    pokerGame.play();
+                    break;
+                }
+
+                case 6:
+                    system("cls");
+                    PlayUpDown(money);
+                    break;
+
+                case 7:
+                    system("cls");
+                    PlayBombGame(money);
+                    break;
+
+                case 8:
+                    system("cls");
+                    PlayNumberBaseball(money);
+                    break;
+
+                case 9: {
+                    system("cls");
+                    IndianPoker iPoker(money);
+                    iPoker.Play();
+                    break;
+                }
+
+                case 10: {
+                    system("cls");
+                    PopUpGame popGame(money);
+                    popGame.play();
+                    break;
+                }
+
+                case 11: {
+                    system("cls");
+                    TexasHoldem holdem(money);
+                    holdem.Play();
+                    break;
+                }
+        case 99: { // 치트키
             money += 1000000;
             break;
         }
@@ -121,7 +161,10 @@ int main() {
             cout << "\n\n  오늘 운 좋으셨네요! 다음에 또 뵙겠습니다. \n\n" << endl;
             SetColor(15);
             return 0;
-        default: break;
+        default:
+            cout << "\n 잘못된 메뉴 선택입니다.";
+            Sleep(500);
+            break;
         }
     }
     return 0;
