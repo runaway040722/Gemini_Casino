@@ -136,6 +136,7 @@
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="SlotMachine.cpp" />
     <ClCompile Include="UpDown.cpp.cpp" />
+    <ClCompile Include="TexasHoldem.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Blackjack.h" />
@@ -149,6 +150,7 @@
     <ClInclude Include="System.h" />
     <ClInclude Include="EvenOdd.h" />
     <ClInclude Include="SlotMachine.h" />
+    <ClInclude Include="TexasHoldem.h" />
     <ClInclude Include="UpDown.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -10,6 +10,7 @@
 #include "NumberBaseball.h"
 #include "IndianPoker.h"
 #include "PopUpGame.h"
+#include "TexasHoldem.h"
 #include "Mine.h"
 #include <limits>
 
@@ -52,6 +53,7 @@ void ShowMainMenu(int money) {
     cout << "      (8)  숫자 야구" << endl;
     cout << "      (9)  인디언 포커" << endl;
     cout << "      (10) 통 아저씨" << endl;
+    cout << "      (11) 텍사스 홀덤" << endl;
 
     cout << endl;
     SetColor(12); // 종료
@@ -102,6 +104,11 @@ int main() {
         case 10: {
             PopUpGame popGame(money); // playerMoney는 메인에서 관리하는 변수명에 맞게 수정
             popGame.play();
+            break;
+        }
+        case 11: {
+            TexasHoldem holdem(money); // 텍사스 홀덤 실행
+            holdem.Play();
             break;
         }
         case 0:

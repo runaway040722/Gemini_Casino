@@ -36,7 +36,7 @@ void PopUpGame::drawBarrel(const vector<bool>& holes, bool exploded) {
     SetColor(6);
     cout << "                .--------------------------. " << endl;
     cout << "               /                            ¡¬ " << endl;
-    cout << "              |          [ BARREL ]          | " << endl;
+    cout << "              |          [ BARREL ]           | " << endl;
     cout << "              |-------------------------------| " << endl;
 
     for (int row = 0; row < 3; ++row) {
@@ -57,7 +57,7 @@ void PopUpGame::drawBarrel(const vector<bool>& holes, bool exploded) {
 
     cout << "              |-------------------------------| " << endl;
     cout << "               ¡¬                             / " << endl;
-    cout << "                  '---------------------------' " << endl;
+    cout << "                 '---------------------------' " << endl;
     SetColor(15);
     cout << "==========================================================" << endl;
 }
