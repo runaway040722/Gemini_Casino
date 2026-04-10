@@ -8,7 +8,8 @@
 #include "UpDown.h"
 #include "BombGame.h"
 #include "NumberBaseball.h"
-#include "Mine.h"  // ★ 광산 헤더 추가
+#include "IndianPoker.h" // ★ 인디언 포커 추가
+#include "Mine.h"
 #include <limits>
 
 using namespace std;
@@ -43,11 +44,13 @@ void ShowMainMenu(int money) {
     cout << "      (1)  777 슬롯 머신" << endl;
     cout << "      (2)  블랙잭 21" << endl;
     cout << "      (3)  홀짝 룰렛 " << endl;
-    cout << "      (4)  경마" << endl;
-    cout << "      (5)  포커 " << endl;
+    cout << "      (4)  경마 게임" << endl;
+    cout << "      (5)  4인 포커" << endl;
     cout << "      (6)  업다운 게임" << endl;
-    cout << "      (7)  폭탄 게임" << endl;
+    cout << "      (7)  폭탄 돌리기" << endl;
     cout << "      (8)  숫자 야구" << endl;
+    cout << "      (9)  인디언 포커" << endl;
+
     cout << endl;
     SetColor(12); // 종료
     cout << "      (0)  게임 종료" << endl;
@@ -59,21 +62,20 @@ void ShowMainMenu(int money) {
 }
 
 int main() {
-    int money = 1000;
+    int money = 100000; // 초기 자본
     int choice;
 
     while (true) {
-        // 돈이 0원 이하인지 먼저 체크해서 광산으로 보냄
+        // 자산 소진 시 광산으로 강제 이동
         if (money <= 0) {
-            PlayMine(money); // Mine.cpp 실행 (탈출 시 money는 100이 됨)
-            continue;        // 광산 탈출 후 다시 메인 메뉴로
+            PlayMine(money);
+            continue;
         }
 
         ShowMainMenu(money);
 
         if (!(cin >> choice)) {
-            cin.clear();
-            cin.ignore((numeric_limits<streamsize>::max)(), '\n');
+            FlushBuffer();
             continue;
         }
 
@@ -85,16 +87,16 @@ int main() {
         case 5: {
             Poker pokerGame(money);
             pokerGame.play();
-            money = pokerGame.getBalance();
-
-            cout << "\n게임을 종료합니다. 메인으로 돌아가려면 아무 키나 누르세요.";
-            cin.ignore();
-            cin.get();
             break;
         }
         case 6: PlayUpDown(money); break;
         case 7: PlayBombGame(money); break;
         case 8: PlayNumberBaseball(money); break;
+        case 9: {
+            IndianPoker iPoker(money);
+            iPoker.Play();
+            break;
+        }
         case 0:
             system("cls");
             SetColor(14);
