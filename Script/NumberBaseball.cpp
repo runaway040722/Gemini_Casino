@@ -46,7 +46,6 @@ bool IsDuplicate(const string& s) {
 
 void PlayNumberBaseball(int& money) {
     system("cls");
-
     random_device rd;
     mt19937 gen(rd());
 
@@ -63,15 +62,14 @@ void PlayNumberBaseball(int& money) {
     cout << "===============================================" << endl;
     cout << "             [ 8. NUMBER BASEBALL ]            " << endl;
     cout << "===============================================" << endl;
-    SetColor(15);
 
-    // 2. 공통 시스템 함수로 베팅 받기
-    cout << " 현재 자산: $" << money << endl;
+    // 2. 베팅 (System.cpp 활용)
     int bet = GetBetAmount(money);
-    FlushBuffer();
+    if (bet <= 0) return;
 
     // 베팅금 선차감
     money -= bet;
+    FlushBuffer();
 
     int chance = 8;
     cout << "\n [ 서로 다른 3자리 숫자를 맞추세요! (0~9) ]" << endl;
@@ -107,51 +105,49 @@ void PlayNumberBaseball(int& money) {
             }
         }
 
-        // 승리 조건
+        // --- 승리 조건 ---
         if (strike == 3) {
-            int reward;
-            // 남은 기회에 따른 배당 (전략적 보상)
-            if (chance == 8) reward = bet * 10;      // 1트 (천운)
-            else if (chance >= 6) reward = bet * 5;  // 2~3트
-            else if (chance >= 4) reward = bet * 3;  // 4~5트
-            else if (chance >= 2) reward = bet * 2;  // 6~7트
-            else reward = (int)(bet * 1.5);          // 8트
+            int winAmount;
+            // 남은 기회에 따른 배당 설정
+            if (chance == 8) winAmount = bet * 10;      // 1트 (대박)
+            else if (chance >= 6) winAmount = bet * 5;  // 2~3트
+            else if (chance >= 4) winAmount = bet * 3;  // 4~5트
+            else if (chance >= 2) winAmount = bet * 2;  // 6~7트
+            else winAmount = (int)(bet * 1.5);          // 8트
 
             system("cls");
             SetColor(10);
             cout << "\n\n [ STRIKE OUT!! ] 정답을 맞췄습니다!" << endl;
             cout << " 정답: " << answer << endl;
-            cout << " 보상: +$" << reward << endl;
 
-            money += reward;
-            SetColor(15);
-            cout << " 현재 자산: $" << money << endl;
+            // ★ 공통 정산 함수 호출 (당첨 상황)
+            PrintResult(money, bet, winAmount);
 
             ClearBuffer();
             return;
         }
 
-        // 힌트 출력 (색상 대비)
+        // 힌트 출력
         if (strike == 0 && ball == 0) {
-            SetColor(12); // 아웃은 빨간색 계열
+            SetColor(12);
             cout << " >> 결과: OUT (일치하는 숫자가 없습니다)" << endl;
         }
         else {
-            SetColor(11); // 힌트는 하늘색
+            SetColor(11);
             cout << " >> 결과: " << strike << " Strike, " << ball << " Ball" << endl;
         }
 
         chance--;
     }
 
-    // 실패 로직
+    // --- 실패 로직 ---
     system("cls");
     SetColor(12);
     cout << "\n\n [ GAME OVER ] 모든 기회를 소진했습니다." << endl;
     cout << " 정답은 [ " << answer << " ] 이었습니다." << endl;
 
-    SetColor(15);
-    cout << " 현재 자산: $" << money << endl;
+    // ★ 공통 정산 함수 호출 (꽝 상황: winAmount = 0)
+    PrintResult(money, bet, 0);
 
     ClearBuffer();
 }
