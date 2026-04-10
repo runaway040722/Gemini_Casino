@@ -1,10 +1,11 @@
 #include "EvenOdd.h"
-#include "System.h"   
+#include "System.h"    
 #include <random>
 #include <vector>
 #include <iomanip>
-#include <iostream>   
-#include <conio.h>    
+#include <iostream>    
+#include <conio.h>     
+#include <windows.h>
 
 using namespace std;
 
@@ -12,12 +13,13 @@ struct Point { int x, y; };
 
 // 홀짝 색상 설정 (홀수: 흰색, 짝수: 빨간색)
 void SetNumberColor(int num) {
-    if (num % 2 != 0) SetColor(15);
-    else SetColor(12);
+    if (num % 2 != 0) SetColor(15); // 홀수 흰색
+    else SetColor(12);              // 짝수 빨간색
 }
 
 void PlayEvenOdd(int& money) {
     random_device rd; mt19937 gen(rd());
+    // 궤도가 36칸이므로 1~36 범위 설정
     uniform_int_distribution<int> dist(1, 36);
 
     system("cls");
@@ -31,11 +33,11 @@ void PlayEvenOdd(int& money) {
         ClearBuffer();
         return;
     }
-    FlushBuffer(); // 배팅 입력 후 남아있는 엔터 싹 비우기
+    FlushBuffer();
 
     cout << "1. 홀수(Odd)  2. 짝수(Even) : ";
     char choice = (char)_getch();
-    FlushBuffer(); // 홀짝 선택 후 혹시 눌렀을 엔터 비우기
+    FlushBuffer();
 
     // --- 36칸 좌표 생성 (테두리 정렬) ---
     vector<Point> orbit;
@@ -56,12 +58,13 @@ void PlayEvenOdd(int& money) {
         SetNumberColor(num);
         cout << num;
     }
+    // 중앙 전광판 틀 출력
     gotoxy(23, 8); SetColor(14); cout << "[    ]";
 
     int currentIdx = 0;
-    int totalSteps = 40 + (gen() % 20); // 회전수 랜덤 설정
+    int totalSteps = 60 + (gen() % 30); // 회전수 설정 (충분히 돌도록 상향)
 
-    // --- 구슬 회전 연출 ---
+    // --- 구슬 회전 및 전광판 연출 ---
     for (int i = 0; i < totalSteps; i++) {
         // 1. 이전 위치 숫자 복구
         int prevNum = currentIdx + 1;
@@ -74,18 +77,24 @@ void PlayEvenOdd(int& money) {
 
         // 3. 새 위치에 구슬 표시
         gotoxy(orbit[currentIdx].x, orbit[currentIdx].y);
-        SetColor(14); cout << "O ";
+        SetColor(14); cout << "O "; // 구슬은 노란색
 
-        // 4. 중앙 숫자 셔플 연출
-        int shuffleNum = dist(gen);
-        gotoxy(25, 8); SetColor(15);
-        cout << setw(2) << shuffleNum;
+        // 4. 중앙 전광판 숫자 실시간 동기화 (핵심 수정)
+        int displayNum = currentIdx + 1; // 현재 구슬이 있는 칸의 번호
+        gotoxy(25, 8);
+        SetNumberColor(displayNum);    // 전광판 숫자 색상도 홀짝에 맞춤
+        cout << setw(2) << displayNum;
 
-        // 마지막 10칸은 점점 느려지게 연출
-        if (totalSteps - i < 10) Sleep(100 + (i * 2));
-        else Sleep(30);
+        // 5. 속도 조절 (점점 느려지는 연출)
+        if (totalSteps - i < 15) {
+            Sleep(50 + (15 - (totalSteps - i)) * 25);
+        }
+        else {
+            Sleep(20);
+        }
     }
 
+    // 최종 결과 확정
     int finalNumber = currentIdx + 1;
 
     // --- 최종 결과 출력 ---
@@ -99,12 +108,12 @@ void PlayEvenOdd(int& money) {
     bool win = (choice == '1' && finalNumber % 2 != 0) || (choice == '2' && finalNumber % 2 == 0);
 
     if (win) {
-        SetColor(10);
+        SetColor(10); // 초록색
         cout << ">>> 승리! +$" << bet << " <<<" << endl;
         money += bet;
     }
     else {
-        SetColor(12);
+        SetColor(12); // 빨간색
         cout << ">>> 패배! -$" << bet << " <<<" << endl;
         money -= bet;
     }
@@ -112,6 +121,5 @@ void PlayEvenOdd(int& money) {
     SetColor(15);
     cout << "현재 보유 자산: $" << money << endl;
 
-    // [핵심] 게임 중 연타한 엔터를 여기서 모두 씹어버리고 대기함
     ClearBuffer();
 }

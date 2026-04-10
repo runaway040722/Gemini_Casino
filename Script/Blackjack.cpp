@@ -93,7 +93,7 @@ void PlayBlackjack(int& money) {
     system("cls");
     SetColor(11);
     cout << "===============================================" << endl;
-    cout << "               [ 2. BLACKJACK ]" << endl;
+    cout << "                [ 2. BLACKJACK ]" << endl;
     cout << "===============================================" << endl;
     SetColor(15);
 
@@ -109,7 +109,7 @@ void PlayBlackjack(int& money) {
 
     Hand player, dealer;
 
-    // 초기 배분 애니메이션
+    // 초기 배분 연출
     system("cls");
     cout << "\n카드를 나누어 줍니다..." << endl;
     player.addCard(deck.drawCard());
@@ -130,11 +130,11 @@ void PlayBlackjack(int& money) {
     dealer.showHand("Dealer (Hidden)");
     player.showHand("Player");
 
-    // --- 플레이어 턴 (1: Hit, 2: Stand, 3: Double) ---
+    // --- 플레이어 턴 ---
     while (true) {
         if (player.getTotal() >= 21) break;
 
-        while (_kbhit()) _getch(); // 키보드 버퍼 비우기
+        while (_kbhit()) _getch();
 
         cout << "\n[1] 히트(Hit) [2] 스탠드(Stand) [3] 더블다운(Double): ";
         char choice = (char)_getch();
@@ -166,20 +166,37 @@ void PlayBlackjack(int& money) {
         }
     }
 
-    // 딜러 턴
+    // --- 딜러 턴 (강화된 승부사 AI) ---
     int pTotal = player.getTotal();
     if (pTotal <= 21) {
-        while (dealer.getTotal() < 17) {
-            system("cls");
-            cout << "\n딜러가 17점 미만이라 카드를 더 뽑습니다..." << endl;
-            dealer.showHand("Dealer");
-            player.showHand("Player");
-            Sleep(1000);
-            dealer.addCard(deck.drawCard());
+        while (true) {
+            int dTotal = dealer.getTotal();
+
+            // 딜러가 카드를 뽑아야 하는 상황:
+            // 1. 딜러 점수가 17점 미만일 때 (기본 룰)
+            // 2. 딜러가 플레이어보다 점수가 낮고, 딜러 점수가 19점 이하일 때 (공격적 배팅)
+            if (dTotal < 17 || (dTotal < pTotal && dTotal <= 19)) {
+                system("cls");
+                SetColor(11);
+                cout << "\n[딜러 턴] ";
+                if (dTotal < 17) cout << "규칙에 따라 카드를 추가로 뽑습니다..." << endl;
+                else cout << "플레이어를 이기기 위해 무리해서라도 카드를 뽑습니다!" << endl;
+
+                SetColor(15);
+                dealer.showHand("Dealer");
+                player.showHand("Player");
+                Sleep(1200);
+
+                dealer.addCard(deck.drawCard());
+            }
+            else {
+                // 17점 이상이면서 플레이어보다 높거나, 20점 이상이면 멈춤
+                break;
+            }
         }
     }
 
-    // 결과
+    // --- 결과 정산 ---
     system("cls");
     dealer.showHand("Dealer");
     player.showHand("Player");
