@@ -8,7 +8,8 @@
 #include "UpDown.h"
 #include "BombGame.h"
 #include "NumberBaseball.h"
-#include "IndianPoker.h" // ★ 인디언 포커 추가
+#include "IndianPoker.h"
+#include "PopUpGame.h"
 #include "Mine.h"
 #include <limits>
 
@@ -50,6 +51,7 @@ void ShowMainMenu(int money) {
     cout << "      (7)  폭탄 돌리기" << endl;
     cout << "      (8)  숫자 야구" << endl;
     cout << "      (9)  인디언 포커" << endl;
+    cout << "      (10) 통 아저씨" << endl;
 
     cout << endl;
     SetColor(12); // 종료
@@ -95,6 +97,11 @@ int main() {
         case 9: {
             IndianPoker iPoker(money);
             iPoker.Play();
+            break;
+        }
+        case 10: {
+            PopUpGame popGame(money); // playerMoney는 메인에서 관리하는 변수명에 맞게 수정
+            popGame.play();
             break;
         }
         case 0:
