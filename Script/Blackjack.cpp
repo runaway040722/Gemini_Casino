@@ -85,117 +85,128 @@ void Hand::showHand(string owner, bool hideFirstCard) const {
             else if (line == 2) cout << "|  " << suitIcons[(int)cards[i].suit] << "   |  ";
             else if (line == 3) {
                 if (r == "10") cout << "|    " << r << " |  ";
-                else           cout << "|     " << r << " |  ";
+                else           cout << "|      " << r << " |  ";
             }
             else if (line == 4) cout << "'-------'  ";
         }
         cout << endl;
     }
     SetColor(15);
-    cout << "Total: " << getTotal() << endl; // 모든 상황에서 합계 공개
+    cout << "Total: " << getTotal() << endl;
 }
 
 // --- 메인 로직 ---
 void PlayBlackjack(int& money) {
-    Deck deck;
-    system("cls");
-    SetColor(11);
-    cout << "===============================================" << endl;
-    cout << "                [ 2. BLACKJACK ]" << endl;
-    cout << "===============================================" << endl;
-    SetColor(15);
+    // [연동] 입장 시 파산 체크
+    if (CheckBankruptcy("당신", money, 1, true)) return;
 
-    int bet = GetBetAmount(money);
-    if (bet <= 0) return;
-
-    // 베팅금 선차감
-    money -= bet;
-    FlushBuffer();
-
-    Hand player, dealer;
-    player.addCard(deck.drawCard());
-    dealer.addCard(deck.drawCard());
-    player.addCard(deck.drawCard());
-    dealer.addCard(deck.drawCard());
-
-    bool playerDone = false;
-    // 1. 플레이어 턴
-    while (!playerDone) {
+    while (true) {
+        Deck deck;
         system("cls");
-        dealer.showHand("Dealer", false); // 딜러 카드 처음부터 공개
-        player.showHand("Player", false);
+        SetColor(11);
+        cout << "===============================================" << endl;
+        cout << "                [ 2. BLACKJACK ]" << endl;
+        cout << "===============================================" << endl;
+        SetColor(15);
 
-        if (player.getTotal() >= 21) break;
+        int bet = GetBetAmount(money);
+        if (bet <= 0) return;
 
-        cout << "\n [1] 히트(Hit) [2] 스탠드(Stand) [3] 더블다운(Double): ";
-        char choice = (char)_getch();
+        // 베팅금 선차감
+        money -= bet;
+        int totalBet = bet; // 정산 기록을 위한 실제 판돈
+        FlushBuffer();
 
-        if (choice == '1') {
-            player.addCard(deck.drawCard());
-        }
-        else if (choice == '2') {
-            playerDone = true;
-        }
-        else if (choice == '3') {
-            if (money >= bet) { // 이미 bet이 차감된 상태이므로 추가로 bet만큼 있는지 확인
-                money -= bet;   // 추가 베팅
-                bet *= 2;
-                player.addCard(deck.drawCard());
-                playerDone = true;
-            }
-            else {
-                SetColor(12); cout << "\n [!] 잔액 부족!"; SetColor(15); Sleep(600);
-            }
-        }
-    }
+        Hand player, dealer;
+        player.addCard(deck.drawCard());
+        dealer.addCard(deck.drawCard());
+        player.addCard(deck.drawCard());
+        dealer.addCard(deck.drawCard());
 
-    int pTotal = player.getTotal();
-    int dTotal = dealer.getTotal();
-
-    // 2. 딜러 턴 (플레이어가 버스트되지 않았을 때만 진행)
-    if (pTotal <= 21) {
-        // 딜러의 합이 플레이어의 합보다 작으면 계속 뽑음 (요청하신 로직)
-        while (dealer.getTotal() < pTotal && dealer.getTotal() < 21) {
+        bool playerDone = false;
+        // 1. 플레이어 턴
+        while (!playerDone) {
             system("cls");
             dealer.showHand("Dealer", false);
             player.showHand("Player", false);
-            cout << "\n 딜러가 당신을 이기기 위해 카드를 뽑는 중..." << endl;
-            Sleep(1200);
-            dealer.addCard(deck.drawCard());
+
+            if (player.getTotal() >= 21) break;
+
+            cout << "\n [1] 히트(Hit) [2] 스탠드(Stand) [3] 더블다운(Double): ";
+            char choice = (char)_getch();
+
+            if (choice == '1') {
+                player.addCard(deck.drawCard());
+            }
+            else if (choice == '2') {
+                playerDone = true;
+            }
+            else if (choice == '3') {
+                if (money >= bet) {
+                    money -= bet;
+                    totalBet *= 2;
+                    player.addCard(deck.drawCard());
+                    playerDone = true;
+                }
+                else {
+                    SetColor(12); cout << "\n [!] 잔액 부족!"; SetColor(15); Sleep(600);
+                }
+            }
         }
-    }
 
-    // 3. 최종 결과 화면
-    system("cls");
-    dealer.showHand("Dealer", false);
-    player.showHand("Player", false);
-    dTotal = dealer.getTotal();
+        int pTotal = player.getTotal();
 
-    int winAmount = 0; // 정산 함수에 넘겨줄 최종 금액
+        // 2. 딜러 턴 (플레이어가 버스트되지 않았을 때만 진행)
+        if (pTotal <= 21) {
+            while (dealer.getTotal() < pTotal && dealer.getTotal() < 21) {
+                system("cls");
+                dealer.showHand("Dealer", false);
+                player.showHand("Player", false);
+                cout << "\n 딜러가 카드를 뽑는 중..." << endl;
+                Sleep(1000);
+                dealer.addCard(deck.drawCard());
+            }
+        }
 
-    if (pTotal > 21) {
-        SetColor(12); cout << "\n [ RESULT ] Player Bust! 패배했습니다." << endl;
-        winAmount = 0;
-    }
-    else if (dTotal > 21) {
-        SetColor(10); cout << "\n [ RESULT ] Dealer Bust! 승리했습니다!" << endl;
-        winAmount = bet * 2;
-    }
-    else if (pTotal > dTotal) {
-        SetColor(10); cout << "\n [ RESULT ] 승리했습니다!" << endl;
-        winAmount = bet * 2;
-    }
-    else if (pTotal < dTotal) {
-        SetColor(12); cout << "\n [ RESULT ] 패배했습니다." << endl;
-        winAmount = 0;
-    }
-    else {
-        SetColor(14); cout << "\n [ RESULT ] 무승부입니다." << endl;
-        winAmount = bet; // 무승부는 원금 회수
-    }
+        // 3. 최종 결과 판정
+        system("cls");
+        dealer.showHand("Dealer", false);
+        player.showHand("Player", false);
+        int dTotal = dealer.getTotal();
 
-    // 공통 정산 함수 호출
-    PrintResult(money, (winAmount == bet * 2 ? bet : bet), winAmount);
+        int winAmount = 0;
 
-    ClearBuffer();
+        if (pTotal > 21) {
+            SetColor(12); cout << "\n [ RESULT ] Player Bust! 패배했습니다." << endl;
+            winAmount = 0;
+        }
+        else if (dTotal > 21) {
+            SetColor(10); cout << "\n [ RESULT ] Dealer Bust! 승리했습니다!" << endl;
+            winAmount = totalBet * 2;
+        }
+        else if (pTotal > dTotal) {
+            SetColor(10); cout << "\n [ RESULT ] 승리했습니다!" << endl;
+            winAmount = totalBet * 2;
+        }
+        else if (pTotal < dTotal) {
+            SetColor(12); cout << "\n [ RESULT ] 패배했습니다." << endl;
+            winAmount = 0;
+        }
+        else {
+            SetColor(14); cout << "\n [ RESULT ] 무승부입니다." << endl;
+            winAmount = totalBet;
+        }
+
+        // [연동] 공통 정산 함수 호출
+        PrintResult(money, totalBet, winAmount);
+
+        // [연동] 판이 끝난 후 플레이어 파산 체크 (0원이면 즉시 광산행)
+        if (CheckBankruptcy("당신", money, 1, true)) return;
+
+        SetColor(15);
+        cout << "\n [1] 다시하기 [0] 나가기 : ";
+        int choice;
+        cin >> choice;
+        if (choice == 0) break;
+    }
 }

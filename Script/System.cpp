@@ -1,15 +1,17 @@
 ﻿#include "System.h"
 #include <vector>
 #include <string>
+#include <iomanip>
 #include <windows.h>
 #include <conio.h>
 #include <iostream>
+#include <random>
+#include <algorithm>
 
 using namespace std;
 
-// 이름 풀 (NPC용)
+// --- NPC 이름 풀 정의 ---
 vector<string> globalNamePool = {
-    // [기존 리스트 및 이전 추가분]
     "민지", "학진", "재용", "라이덴", "서연", "규찬", "미토마", "이강인",
     "미쿠", "카인", "선바", "선우", "유현", "정우", "세현", "동현",
     "영환", "프리렌", "니노", "아루", "유린", "카프카", "호두", "감우",
@@ -34,6 +36,7 @@ vector<string> globalNamePool = {
     "콜롬비나", "소"
 };
 
+// --- 유틸리티 함수 ---
 void gotoxy(int x, int y) {
     COORD pos = { (SHORT)x, (SHORT)y };
     SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), pos);
@@ -44,124 +47,106 @@ void SetColor(int color) {
 }
 
 void FlushBuffer() {
-    while (_kbhit()) _getch();
+    while (_kbhit()) (void)_getch();
     cin.clear();
 }
 
 void ClearBuffer() {
-    while (_kbhit()) _getch();
+    while (_kbhit()) (void)_getch();
     cin.clear();
-    if (cin.rdbuf()->in_avail()) {
-        cin.ignore(1000, '\n');
-    }
+    if (cin.rdbuf()->in_avail()) cin.ignore(1000, '\n');
     SetColor(14);
     cout << "\n [아무 키나 누르면 메뉴로 돌아갑니다]";
-    _getch();
+    (void)_getch();
 }
 
-// 이게 네가 원한 깔끔한 베팅 함수 전체 로직이야
-int GetBetAmount(int currentMoney) {
-    int bet = 0;
-    while (true) {
-        system("cls"); // 베팅 시작할 때 화면 깔끔하게 정리
+// --- 광산 연출 함수 (텍스트 절대 보존) ---
+void DragToMine(const std::string& name, bool isPlayer) {
+    system("cls");
+    SetColor(12);
 
-        // 상단 헤더 느낌
-        SetColor(14);
-        cout << "===============================================" << endl;
-        cout << "                [ 베팅 단계 ]" << endl;
-        cout << "===============================================" << endl;
-
-        SetColor(15);
-        cout << "\n [ 보유 자산: " << currentMoney << "$ ]" << endl;
-
-        SetColor(14);
-        cout << " [ 베팅 금액 투입 ] (올인: a) >> ";
-
-        string input;
-        cin >> input;
-
-        if (input == "a" || input == "A") {
-            if (currentMoney <= 0) {
-                SetColor(12);
-                cout << "\n >> 잔액이 부족하여 올인을 할 수 없습니다!" << endl;
-                Sleep(1000);
-                continue;
-            }
-            bet = currentMoney;
-            SetColor(11);
-            cout << "\n >>> 올인 완료!! 모든 자산을 걸었습니다!" << endl;
-        }
-        else {
-            try {
-                bet = stoi(input);
-            }
-            catch (...) {
-                SetColor(12);
-                cout << "\n >> 숫자 또는 'a'를 정확히 입력해 주세요." << endl;
-                Sleep(1000);
-                continue;
-            }
-
-            if (bet > currentMoney) {
-                SetColor(12);
-                cout << "\n >> 자산이 부족합니다! (현재 최대 베팅: " << currentMoney << "$)" << endl;
-                Sleep(1000);
-                continue;
-            }
-            if (bet <= 0) {
-                SetColor(12);
-                cout << "\n >> 최소 1$ 이상은 투입해야 합니다." << endl;
-                Sleep(1000);
-                continue;
-            }
-        }
-
-        // 베팅 성공 피드백
-        SetColor(10);
-        cout << " >> 베팅 성공! 잠시 후 게임이 시작됩니다...";
-        Sleep(800);
-
-        system("cls"); // ★ 베팅 끝나면 화면 싹 지우고 게임판으로 넘김
-        break;
-    }
-    return bet;
-}
-
-void PrintResult(int& money, int bet, int winAmount) {
-    int profit = winAmount - bet; // 순수익 계산
-
-    cout << "\n-----------------------------------------------" << endl;
-
-    if (winAmount > 0) {
-        money += winAmount; // 자산 업데이트
-
-        SetColor(10); // 초록색
-        cout << " [결과] 당첨! 축하합니다." << endl;
-        SetColor(15);
-        cout << "  - 총 당첨금 : +$" << winAmount << endl;
-
-        if (profit > 0) {
-            SetColor(11); // 하늘색
-            cout << "  - 실제 수익 : +$" << profit << endl;
-        }
-        else if (profit == 0) {
-            SetColor(15);
-            cout << "  - 실제 수익 : +$0 (본전치기!)" << endl;
-        }
-        else {
-            SetColor(12); // 빨간색 (딴 돈보다 건 돈이 클 때)
-            cout << "  - 실제 수익 : -$" << abs(profit) << " (손해 발생)" << endl;
-        }
+    if (isPlayer) {
+        string pLines[] = {
+            "\"아악! 한 번만 더 기회를!! 이번엔 진짜 딸 수 있다고!!\"",
+            "\"이거 놔! 내 손목을 걸게! 한 판만 더 하게 해줘!!\"",
+            "\"제발... 집에 가족들이 기다리고 있어요... 살려주세요!\"",
+            "\"사기야! 이건 조작이야! 너희들 다 한통속이지!!\"",
+            "\"으아아아아아악! 싫어! 지하로 가기 싫어!! 안 돼!!!\""
+        };
+        cout << "\n\n [!] 검은 양복 : \"광산에 신입이 필요한데, 자네가 딱이군.\"" << endl; Sleep(1000);
+        cout << " [!] 당신 : " << pLines[rand() % 5] << endl; Sleep(1500);
+        SetColor(8);
+        cout << " [!] (검은 양복들이 당신의 뒷덜미를 낚아챕니다.)" << endl; Sleep(1000);
+        cout << " [!] (질질 끌려가는 소리... 깡... 깡...)" << endl; Sleep(2000);
+        cout << " [!] (철창문이 닫히는 소리... 쾅!)" << endl; Sleep(1500);
+        SetColor(12);
+        cout << "\n [!] 당신은 이제 빛이 들지 않는 막장의 '번호'가 되었습니다." << endl;
+        cout << " [!] [GAME OVER - 평생 채굴형]" << endl; Sleep(3000);
     }
     else {
-        // winAmount가 0인 경우 (완전 꽝)
-        SetColor(12);
-        cout << " [결과] 꽝! 베팅금을 모두 잃었습니다." << endl;
-        cout << "  - 손실 금액 : -$" << bet << endl;
+        string aiLines[] = {
+            "\"으아아악! 안 돼! 난 못 가!!\"", "\"살려줘요! 저놈들이 날 죽이려 해!\"",
+            "\"빌어먹을... 마지막에 하이 카드만 아니었어도!!\"", "\"내... 내 돈... 전 재산이...\"",
+            "\"차라리 여기서 죽여라! 광산은 싫어!!\"", "\"너! 너 때문이야! 너만 아니었으면!!\"",
+            "\"살려주세요... 시키는 건 뭐든 할게요...\"", "\"이건 꿈이야... 깨어나야 해!!\"",
+            "\"내가 누군 줄 알아? 나 이 근처 유지라고!!\"", "\"돈은 더 있어요... 집에... 숨겨둔 금고가...\"",
+            "\"옆 테이블이랑 짠 거지? 다 알고 있어!!\"", "\"내 계산은 완벽했어... 확률이 이럴 리 없어!\"",
+            "\"제발... 칩 한 개만 빌려줘... 복구할 수 있어...\"", "\"아니야... 이건 무효야! 다시 해!!\"",
+            "\"으아아악! 내 팔! 팔 부러지겠어!!\"", "\"나가면 너부터 죽여버릴 거야!!\"",
+            "\"히히... 카드... 내 카드 어디 갔어?\"", "\"도박은 질병이라더니... 내가 미쳤지...\"",
+            "\"마누라 미안해... 애들 학원비였는데...\"", "\"전부 다 가져가라! 하지만 목숨만은!!\"",
+            "\"이 사기꾼 놈들! 카지노 통째로 불 질러 버릴 거야!\"", "\"악! 내 머리! 머리채 잡지 마!!\"",
+            "\"어이 딜러! 아까 나랑 눈 마주쳤잖아! 도와달라고!!\"", "\"아직 100골드 남았어! 주머니에 있다고!!\"",
+            "\"이거 놔! 내 발로 걸어갈 테니까!!\"", "\"으으... 내 장기... 장기만은 안 돼...\"",
+            "\"내가 다시 돌아오면 너희들 다 끝장이야!!\"", "\"하늘이 무심하시지... 어떻게 나한테!!\"",
+            "\"엄마... 엄마 보고 싶어... 으허헝...\"", "\"저 플레이어 녀석 밑장 뺐어! 내가 봤어!!\"",
+            "\"한 판만... 딱 한 판만 더 하면 왕창 딸 수 있었는데!!\"", "\"이 지옥 같은 곳에서 나갈 거야!!\"",
+            "\"숨이... 숨이 안 쉬어져... 살려줘!!\"", "\"당신들 이거 인권 침해야! 고소할 거야!!\"",
+            "\"(바닥에 침을 뱉으며) 퉤! 더러운 놈들!!\"", "\"난 죄가 없어! 도박이 죄지!!\"",
+            "\"내 인생 돌려내!! 이 개새끼들아!!\"", "\"으아아... 누가... 제발...\"",
+            "\"어머니 수술비였단 말이야... 제발...\"", "\"저놈이 내 운을 다 뺏어갔어!!\"",
+            "\"광산? 거기 가면 살아서 못 나온다며!!\"", "\"싫어! 어두운 곳은 무섭단 말이야!!\"",
+            "\"(거품을 물며) 으버버... 으으...\"", "\"날 어디로 데려가는 거야!! 대답해!!\"",
+            "\"판돈... 내 판돈... 돌려줘...\"", "\"너희들 천벌 받을 거야!! 반드시!!\"",
+            "\"(허탈하게 웃으며) 하하하... 그래... 다 가져가라...\"", "\"내 목숨은 곡괭이보다 가벼운가 보군...\"",
+            "\"아니야... 난 아직 패배하지 않았어!!\"", "\"으아아아아아아아아악!!! (비명)\""
+        };
+        SetColor(11);
+        cout << "\n [!] " << name << " 파산! 검은 양복들이 그림자처럼 다가옵니다." << endl; Sleep(800);
+        SetColor(14);
+        cout << " [!] " << name << " : " << aiLines[rand() % 50] << endl; Sleep(1200);
+        SetColor(8);
+        cout << " [!] (멀어지는 비명소리...) \"으아아아아악! 살려줘!!\"" << endl;
+        cout << " [!] (질질 끌려가는 소리가 복도 끝에서 사라집니다.)" << endl; Sleep(1500);
+        SetColor(15);
+        cout << " [!] 잠시 정적이 흐른 뒤, 새로운 게임이 준비됩니다." << endl; Sleep(1000);
     }
+}
 
-    SetColor(14); // 노란색
-    cout << "\n [ 현재 자산 : $" << money << " ]" << endl;
+// --- 파산 판단 (여기에 게임 로직을 넣지 않고 판단만 수행) ---
+bool CheckBankruptcy(const std::string& name, int& money, int threshold, bool isPlayer) {
+    if (money < threshold) {
+        DragToMine(name, isPlayer);
+        return true;
+    }
+    return false;
+}
+
+int GetBetAmount(int currentMoney) {
+    // 베팅 금액 입력 로직이 필요하다면 여기에 작성
+    return 0;
+}
+
+void PrintResult(int& money, int pot, int resultType) {
+    // 결과 출력 로직이 필요하다면 여기에 작성
+}
+
+// --- 로그 출력 ---
+void PrintActionLog(string name, string action, int color) {
     SetColor(15);
-    cout << "-----------------------------------------------" << endl;
+    cout << " [!] " << left << setw(15) << name << " : ";
+    Sleep(500);
+    SetColor(color);
+    cout << action << endl;
+    SetColor(15);
 }

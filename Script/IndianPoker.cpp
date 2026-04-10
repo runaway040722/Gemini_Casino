@@ -1,5 +1,5 @@
 #include "IndianPoker.h"
-#include "System.h"
+#include "System.h" // 공통 시스템 헤더 추가
 #include <iostream>
 #include <vector>
 #include <string>
@@ -42,6 +42,25 @@ void IndianPoker::InitDeck() {
     currentDeckIdx = 0;
 }
 
+// AI가 파산했을 때 교체해주는 로직 추가
+void IndianPoker::CheckAndReplaceAI() {
+    for (int i = 1; i < (int)players.size(); i++) {
+        if (players[i].money <= 0) {
+            // AI 광산 연출
+            DragToMine(players[i].name, false);
+
+            // 새 NPC 입장
+            string newName = globalNamePool[rand() % globalNamePool.size()];
+            players[i].name = newName;
+            players[i].money = 100000;
+
+            SetColor(11);
+            cout << "\n [★] 빈자리에 새로운 타짜 [" << newName << "]가 입장했습니다." << endl;
+            Sleep(1000);
+        }
+    }
+}
+
 string IndianPoker::GetCardStr(IndianCard c) {
     string s_mark;
     if (c.suit == 0) s_mark = "♠";
@@ -55,7 +74,7 @@ void IndianPoker::ShowTable(bool revealPlayerCard) {
     system("cls");
     SetColor(14);
     cout << "==========================================================" << endl;
-    cout << "               [ 3인 인디언 포커 : 1장 승부 ]               " << endl;
+    cout << "                [ 3인 인디언 포커 : 1장 승부 ]                " << endl;
     cout << "          현재 누적 판돈(POT): " << pot << "$" << endl;
     cout << "==========================================================" << endl;
     SetColor(15);
@@ -96,31 +115,25 @@ int IndianPoker::EvaluateWinner() {
 }
 
 void IndianPoker::Play() {
-    while (true) {
-        // 1. 파산 체크
-        if (playerRef < 1000) {
-            SetColor(12);
-            cout << "\n [!] 자산 부족으로 게임 종료." << endl;
-            (void)_getch(); return;
-        }
+    // 진입 시 파산 체크
+    if (CheckBankruptcy("당신", playerRef, 1000, true)) return;
 
-        // 2. 카드 소진 체크 (36장 소진 시 종료)
+    while (true) {
+        // AI 교체 및 카드 소진 체크
+        CheckAndReplaceAI();
+
         if (currentDeckIdx + 3 > (int)deck.size()) {
             SetColor(11);
-            cout << "\n [!] 36장의 카드를 모두 소진했습니다! 게임을 마칩니다." << endl;
-            cout << " [!] 최종 잔고: " << playerRef << "$" << endl;
-            cout << "\n [ 아무 키나 누르면 메뉴로 돌아갑니다 ]";
-            (void)_getch(); return;
-        }
-
-        for (int i = 1; i < (int)players.size(); i++) {
-            if (players[i].money < 1000) players[i].money = 100000;
+            cout << "\n [!] 카드를 모두 소진했습니다! 덱을 새로 섞습니다." << endl;
+            InitDeck();
+            Sleep(1500);
         }
 
         int currentBet = 0;
         int baseBet = 1000;
         pot = 0;
 
+        // 앤티(기본금) 납부 및 카드 배분
         for (int i = 0; i < (int)players.size(); i++) {
             int& m = (i == 0) ? playerRef : players[i].money;
             m -= baseBet;
@@ -136,7 +149,7 @@ void IndianPoker::Play() {
             for (int i = 0; i < (int)players.size(); i++) {
                 if (players[i].isFolded) continue;
 
-                if (i == 0) {
+                if (i == 0) { // 플레이어 턴
                     cout << "\n [1]콜 [2]레이즈 [3]올인 [4]다이 : ";
                     char choice = (char)_getch();
                     if (choice == '2') {
@@ -154,7 +167,7 @@ void IndianPoker::Play() {
                         playerRef -= callAmt; pot += callAmt;
                     }
                 }
-                else {
+                else { // AI 턴
                     cout << "\n " << players[i].name << " 생각 중..."; Sleep(400);
                     int maxVisible = 0;
                     for (int j = 0; j < 3; j++) {
@@ -176,11 +189,12 @@ void IndianPoker::Play() {
                         cout << (currentBet == 0 ? " [ 체크 ]" : " [ 콜 ]");
                     }
                 }
-                int active = 0;
-                for (auto& p : players) if (!p.isFolded) active++;
-                if (active <= 1) { roundActive = false; break; }
+
+                int activeCount = 0;
+                for (auto& p : players) if (!p.isFolded) activeCount++;
+                if (activeCount <= 1) { roundActive = false; break; }
             }
-            roundActive = false;
+            roundActive = false; // 1바퀴 돌면 종료 (단순화된 규칙)
         }
 
         ShowTable(true);
@@ -194,12 +208,12 @@ void IndianPoker::Play() {
             else players[winner].money += pot;
         }
 
-        // --- 엔터 키 대기 로직 ---
+        // 판 종료 후 플레이어 파산 체크
+        if (CheckBankruptcy("당신", playerRef, 1, true)) return;
+
         SetColor(15);
-        cout << "\n [Enter]를 누르면 다음 판으로 넘어갑니다...";
-        while (true) {
-            int key = _getch();
-            if (key == 13) break; // 13은 엔터 키(Carriage Return)의 ASCII 코드
-        }
+        cout << "\n [1] 계속하기 [0] 나가기 (Enter 입력 시 계속) : ";
+        int key = _getch();
+        if (key == '0') break;
     }
 }

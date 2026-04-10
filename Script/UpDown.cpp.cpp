@@ -14,10 +14,16 @@ void PlayUpDown(int& money) {
 
     SetColor(14);
     cout << "===============================================" << endl;
-    cout << "              [ 6. UP & DOWN GAME ]            " << endl;
+    cout << "              [ 6. UP & DOWN GAME ]             " << endl;
     cout << "===============================================" << endl;
 
-    // 1. 베팅 (System.cpp의 GetBetAmount 활용)
+    // 1. 베팅 (최소 판돈을 1000$ 정도로 가정)
+    int minBet = 1000;
+
+    // 시작 전 이미 돈이 부족하면 입구 컷 (광산행)
+    string pName = "당신";
+    if (CheckBankruptcy(pName, money, 1, true)) return;
+
     int bet = GetBetAmount(money);
     if (bet <= 0) return;
 
@@ -25,12 +31,13 @@ void PlayUpDown(int& money) {
     money -= bet;
     FlushBuffer();
 
-    // 1~100 사이의 정답 생성
     int answer = rand() % 100 + 1;
     int chance = 6;
 
     cout << "\n [ 1 ~ 100 사이 숫자를 맞추세요 ]" << endl;
     cout << " 빨리 맞출수록 높은 배당금을 획득합니다!" << endl;
+
+    bool isWin = false; // 승리 여부 플래그
 
     while (chance > 0) {
         SetColor(15);
@@ -53,17 +60,14 @@ void PlayUpDown(int& money) {
             continue;
         }
 
-        // --- 정답 판정 ---
         if (guess == answer) {
             int winAmount;
-
-            // 남은 기회에 따른 차등 배당 설정
             switch (chance) {
-            case 6: winAmount = bet * 15; break; // 1트 (초대박)
-            case 5: winAmount = bet * 7; break;  // 2트
-            case 4: winAmount = bet * 4; break;  // 3트
-            case 3: winAmount = bet * 2; break;  // 4트
-            default: winAmount = (int)(bet * 1.2); break; // 나머지
+            case 6: winAmount = bet * 15; break;
+            case 5: winAmount = bet * 7; break;
+            case 4: winAmount = bet * 4; break;
+            case 3: winAmount = bet * 2; break;
+            default: winAmount = (int)(bet * 1.2); break;
             }
 
             system("cls");
@@ -71,11 +75,9 @@ void PlayUpDown(int& money) {
             cout << "\n\n [ BINGO!! ] 정답입니다!" << endl;
             cout << " 정답: " << answer << " | 소모 기회: " << (7 - chance) << "회" << endl;
 
-            // ★ 공통 정산 함수 호출 (당첨)
             PrintResult(money, bet, winAmount);
-
-            ClearBuffer();
-            return;
+            isWin = true;
+            break;
         }
         else if (guess < answer) {
             SetColor(11);
@@ -85,18 +87,26 @@ void PlayUpDown(int& money) {
             SetColor(12);
             cout << " >> [ DOWN ] 더 작은 숫자입니다." << endl;
         }
-
         chance--;
     }
 
-    // --- 실패 로직 ---
-    system("cls");
-    SetColor(12);
-    cout << "\n\n [ FAIL ] 모든 기회를 잃었습니다." << endl;
-    cout << " 정답은 [ " << answer << " ] 이었습니다." << endl;
+    if (!isWin) {
+        system("cls");
+        SetColor(12);
+        cout << "\n\n [ FAIL ] 모든 기회를 잃었습니다." << endl;
+        cout << " 정답은 [ " << answer << " ] 이었습니다." << endl;
+        PrintResult(money, bet, 0);
+    }
 
-    // ★ 공통 정산 함수 호출 (꽝: winAmount = 0)
-    PrintResult(money, bet, 0);
+    // --- [핵심] 게임 종료 후 파산 체크 ---
+    // 결과 확인을 위해 잠시 대기 후 체크
+    cout << "\n [!] 상태를 확인합니다...";
+    Sleep(1000);
+
+    // money가 0원이거나 다음 게임 최소 베팅금보다 적으면 광산행
+    if (CheckBankruptcy(pName, money, 1, true)) {
+        return; // 광산 연출 후 메인 메뉴로 강제 종료
+    }
 
     ClearBuffer();
 }

@@ -22,7 +22,7 @@ private:
     std::vector<IndianCard> deck;
     int& playerRef;
     int pot;
-    int currentDeckIdx; // <-- 이 줄이 누락되어 에러가 난 것입니다.
+    int currentDeckIdx;
 
 public:
     IndianPoker(int& money);
@@ -31,6 +31,9 @@ public:
     void ShowTable(bool revealPlayerCard);
     int EvaluateWinner();
     std::string GetCardStr(IndianCard c);
+
+    // [추가] .cpp에서 구현한 AI 교체 함수를 여기에 선언해야 합니다.
+    void CheckAndReplaceAI();
 };
 
 #endif

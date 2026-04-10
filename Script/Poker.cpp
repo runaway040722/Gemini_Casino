@@ -1,6 +1,9 @@
 #include "Poker.h"
+#include "System.h" // 파산 및 연출 시스템 연동
 #include <windows.h>
 #include <iomanip>
+#include <algorithm>
+#include <random>
 
 extern vector<string> globalNamePool;
 
@@ -125,13 +128,9 @@ void Poker::showTable(bool revealAll) {
 
 bool Poker::bettingRound() {
     bool isShowdown = false;
-
-    // 이번 라운드에서 다른 플레이어들이 낼 수 있는 최대 금액 계산 (나를 제외한 AI들 중 최고액)
     int maxOpponentCanPay = 0;
     for (int i = 1; i < (int)players.size(); i++) {
-        if (!players[i].isFolded) {
-            maxOpponentCanPay = max(maxOpponentCanPay, players[i].money);
-        }
+        if (!players[i].isFolded) maxOpponentCanPay = max(maxOpponentCanPay, players[i].money);
     }
 
     for (int i = 0; i < (int)players.size(); i++) {
@@ -139,19 +138,14 @@ bool Poker::bettingRound() {
 
         if (i == 0) { // 플레이어 턴
             if (playerRef <= 0) continue;
-
             cout << "\n[1]콜 [2]하프 [3]올인 [4]다이 : ";
             int choice; cin >> choice;
 
-            if (choice == 3) { // [수정] 올인 시 내가 손해보지 않게 제한
-                // 내가 가진 돈과 상대가 낼 수 있는 최대치 중 작은 금액만큼만 베팅
+            if (choice == 3) {
                 int actualBet = min(playerRef, maxOpponentCanPay + currentBet);
-
-                pot += actualBet;
-                playerRef -= actualBet; // 전재산 다 깎이는 게 아니라 베팅한 만큼만 차감
-                currentBet = max(currentBet, actualBet);
-                isShowdown = true;
-                cout << " >> [올인] " << actualBet << "$ 베팅! (남은 자산: " << playerRef << "$)" << endl;
+                pot += actualBet; playerRef -= actualBet;
+                currentBet = max(currentBet, actualBet); isShowdown = true;
+                cout << " >> [올인] " << actualBet << "$ 베팅!" << endl;
             }
             else if (choice == 4) players[i].isFolded = true;
             else if (choice == 2) {
@@ -159,7 +153,7 @@ bool Poker::bettingRound() {
                 int act = min(playerRef, raise);
                 playerRef -= act; pot += act; currentBet = act;
             }
-            else { // 콜
+            else {
                 int pay = min(playerRef, currentBet);
                 playerRef -= pay; pot += pay;
             }
@@ -186,40 +180,29 @@ bool Poker::bettingRound() {
     return isShowdown;
 }
 
+// AI 파산 시 교체 로직
 void Poker::CheckAndReplaceAI() {
     for (int i = 1; i < (int)players.size(); i++) {
         if (players[i].money <= 0) {
-            SetColor(12);
-            string bossLines[] = {
-                "\"호오, 빈털터리가 되셨군. 약속은 약속이지.\"",
-                "\"이 바닥 생리가 그래. 돈 없으면 몸으로 때워야지?\"",
-                "\"이봐, 저 친구 '그곳'으로 모셔라. 아주 깊은 곳으로.\"",
-                "\"걱정 마, 광산 공기는 아주 시원하니까.\"",
-                "\"빚이 이만큼인데 살려달라고? 양심이 없구만.\""
-            };
-            string victimLines[] = {
-                "\"제발! 한 판만 더! 내일 입금된단 말이야!\"",
-                "\"이거 놔! 내 발로 갈 거야! 으아아악!\"",
-                "\"너희들 내가 누군지 알아? 읍! 으읍...!\"",
-                "\"안 돼... 어머니가 기다리고 계신단 말이야...\"",
-                "\"이건 사기야! 저 녀석 패가 말이 안 된다고!\""
-            };
-            int r = rand() % 5;
-            cout << "\n [!] " << players[i].name << " 파산! 검은 양복들이 등장합니다." << endl; Sleep(800);
-            cout << " [!] 검은 양복들 : " << bossLines[r] << endl; Sleep(1000);
-            cout << " [!] " << players[i].name << " : " << victimLines[r] << endl; Sleep(1200);
-
-            SetColor(8); cout << " [!] (질질 끌려가는 소리와 함께 멀어집니다...)" << endl; Sleep(1500);
+            // [연동] AI가 끌려가는 공통 연출 실행
+            DragToMine(players[i].name, false);
 
             string newName = globalNamePool[rand() % globalNamePool.size()];
-            players[i].name = newName; players[i].money = 100000;
-            SetColor(11); cout << " [★] 새로운 참가자 [" << newName << "] 입장." << endl; Sleep(1000);
+            players[i].name = newName;
+            players[i].money = 100000;
+
+            SetColor(11);
+            cout << "\n [★] 빈자리에 새로운 참가자 [" << newName << "]가 입장했습니다." << endl;
+            Sleep(1000);
         }
     }
 }
 
 void Poker::play() {
     system("cls");
+    // [연동] 입장 시 플레이어 파산 체크
+    if (CheckBankruptcy("당신", playerRef, 1, true)) return;
+
     SetColor(11);
     cout << "\n\n          +------------------------------------------+" << endl;
     cout << "          |          [ 포커 테이블 입장 ]            |" << endl;
@@ -236,13 +219,16 @@ void Poker::play() {
     else if (menu == 4) baseBet = 20000; else baseBet = 5000;
 
     while (true) {
-        if (playerRef < baseBet) { cout << "\n [!] 자산 부족으로 광산행..."; Sleep(2000); return; }
+        // [연동] 매 판 시작 전 자산 체크 (입장컷)
+        if (CheckBankruptcy("당신", playerRef, baseBet, true)) return;
+
         CheckAndReplaceAI();
 
         initDeck(); shuffleDeck(); pot = 0; currentBet = baseBet;
         for (int i = 0; i < (int)players.size(); i++) {
-            if (i == 0) playerRef -= baseBet / 2; else players[i].money -= baseBet / 2;
-            pot += baseBet / 2;
+            int entryFee = baseBet / 2;
+            if (i == 0) playerRef -= entryFee; else players[i].money -= entryFee;
+            pot += entryFee;
             players[i].hand.clear(); players[i].isFolded = false;
         }
 
@@ -258,29 +244,31 @@ void Poker::play() {
                 }
                 break;
             }
-            if (r < 4) {
-                for (auto& p : players) if (!p.isFolded) p.hand.push_back(deck[dIdx++]);
-            }
+            if (r < 4) for (auto& p : players) if (!p.isFolded) p.hand.push_back(deck[dIdx++]);
         }
 
         showTable(true);
         int winIdx = -1; long long best = -1;
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < (int)players.size(); i++) {
             if (players[i].isFolded) continue;
             long long s = GetHandStrength(players[i].hand);
             if (s > best) { best = s; winIdx = i; }
         }
 
-        SetColor(10);
-        cout << "\n ★ 승자: " << players[winIdx].name << " ★" << endl;
-        cout << " 완성 패: " << GetDetailedRankName(players[winIdx].hand) << endl;
-        cout << " 획득 금액: " << pot << "$" << endl;
-        if (winIdx == 0) playerRef += pot; else players[winIdx].money += pot;
+        if (winIdx != -1) {
+            SetColor(10);
+            cout << "\n ★ 승자: " << players[winIdx].name << " ★" << endl;
+            cout << " 완성 패: " << GetDetailedRankName(players[winIdx].hand) << endl;
+            cout << " 획득 금액: " << pot << "$" << endl;
+            if (winIdx == 0) playerRef += pot; else players[winIdx].money += pot;
+        }
+
+        // [연동] 판이 끝난 후 플레이어 파산 여부 최종 확인
+        if (CheckBankruptcy("당신", playerRef, 1, true)) return;
 
         SetColor(15); cout << "\n [1]계속 [0]종료 : ";
         int c; cin >> c; if (c == 0) break;
     }
 }
 
-// 미사용 인터페이스 구현
 string Poker::rankToString(HandRank rank) { return ""; }

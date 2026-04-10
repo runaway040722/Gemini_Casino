@@ -112,7 +112,7 @@ int main() {
             break;
         }
         case 99: {
-            money += 99999999;
+            money += 1000000;
             break;
         }
         case 0:

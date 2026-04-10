@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <random>
 #include <windows.h>
+#include <conio.h>
 
 using namespace std;
 
@@ -67,19 +68,23 @@ void PopUpGame::play() {
     mt19937 g(rd());
 
     while (true) {
+        // [추가] 시작 전 플레이어 파산 체크
+        string pName = "당신";
+        if (CheckBankruptcy(pName, playerRef, 1, true)) return;
+
         // 상대방 이름 랜덤 설정
         string enemyName = globalNamePool.empty() ? "도박꾼" : globalNamePool[g() % globalNamePool.size()];
+        int enemyMoney = 100000; // 상대방 가상 자금
 
         system("cls");
         SetColor(14);
         cout << "\n [ 통아저씨 게임 ]" << endl;
         cout << " 이번 상대: " << enemyName << endl;
 
-        // 1. 베팅 (System.cpp의 GetBetAmount 활용)
+        // 1. 베팅
         int bet = GetBetAmount(playerRef);
         if (bet <= 0) return;
 
-        // 베팅 및 판돈(Pot) 설정
         playerRef -= bet;
         int pot = bet * 2;
         FlushBuffer();
@@ -103,13 +108,13 @@ void PopUpGame::play() {
             cout << " >> " << enemyName << "의 주사위: [" << enemyDice << "]" << endl;
 
             if (playerDice < enemyDice) {
-                turn = 0; // 플레이어 선공
+                turn = 0;
                 SetColor(11);
                 cout << " >>> 당신이 선공입니다!" << endl;
                 break;
             }
             else if (enemyDice < playerDice) {
-                turn = 1; // 상대방 선공
+                turn = 1;
                 SetColor(13);
                 cout << " >>> " << enemyName << "이(가) 선공입니다!" << endl;
                 break;
@@ -155,26 +160,40 @@ void PopUpGame::play() {
             if (currentChoice == bomb) {
                 drawBarrel(holes, true);
                 if (turn == 0) {
-                    // 내가 찌른 게 터짐 (패배)
                     SetColor(12);
                     cout << "\n [!] 펑!! 당신이 당첨되었습니다!" << endl;
                     winAmount = 0;
                 }
                 else {
-                    // 상대가 찌른 게 터짐 (승리)
                     SetColor(10);
                     cout << "\n [!] 펑!! " << enemyName << "이(가) 당첨되었습니다!" << endl;
                     winAmount = pot;
                 }
                 gameOver = true;
+                Sleep(1500);
             }
             else {
-                turn = 1 - turn; // 턴 교체
+                turn = 1 - turn;
             }
         }
 
         // 4. 공통 정산 함수 호출
         PrintResult(playerRef, bet, winAmount);
+
+        // --- [핵심] 결과 후 파산 체크 시스템 ---
+        // 내가 졌다면 나의 파산을 체크
+        if (winAmount == 0) {
+            if (CheckBankruptcy(pName, playerRef, 1, true)) return;
+        }
+        // 내가 이겼다면 상대방(AI)의 파산을 연출 (이 게임은 판돈을 다 잃은 것으로 간주)
+        else {
+            enemyMoney -= bet; // 가상 자금 차감
+            if (enemyMoney <= 95000) { // 예시: 일정 판돈 이하가 되면 상대가 끌려감
+                DragToMine(enemyName, false);
+                cout << " [!] 새로운 도전자가 대기실에서 들어옵니다..." << endl;
+                Sleep(1000);
+            }
+        }
 
         SetColor(15);
         cout << "\n [1] 계속하기 [0] 퇴장 : ";
