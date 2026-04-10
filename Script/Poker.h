@@ -9,7 +9,7 @@
 using namespace std;
 
 struct PokerCard {
-    int suit;
+    int suit; // 0:♠, 1:♥, 2:◆, 3:♣
     int rank;
 };
 
@@ -45,10 +45,9 @@ private:
     void shuffleDeck();
     void showTable(bool revealAll);
     bool bettingRound();
-    int evaluateWinner();
+    void CheckAndReplaceAI(); // 광산 연출 및 AI 교체
 
-    // ★ 에러 해결: 보조 함수들을 클래스 멤버로 선언
-    HandRank checkHandForPlayer(vector<PokerCard>& hand);
+    // 보조 함수들
     string GetRankStr(int rank);
     string GetDetailedRankName(vector<PokerCard>& hand);
 

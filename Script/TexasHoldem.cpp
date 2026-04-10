@@ -14,15 +14,8 @@ using namespace std;
 
 extern vector<string> globalNamePool;
 
-struct THPlayer {
-    string name;
-    vector<PokerCard> hand;
-    int money;
-    bool isFolded;
-};
-
-// 숫자를 문자열로 변환 (14->A, 11->J 등)
-string GetRankName(int rank) {
+// [보조] 숫자 변환
+static string GetRankNameLocal(int rank) {
     if (rank == 14 || rank == 1) return "A";
     if (rank == 11) return "J";
     if (rank == 12) return "Q";
@@ -36,7 +29,8 @@ string TexasHoldem::getCardName(PokerCard c) {
     else if (c.suit == 1) s_mark = "♥";
     else if (c.suit == 2) s_mark = "◆";
     else s_mark = "♣";
-    return s_mark + GetRankName(c.rank);
+    int r = (c.rank == 1) ? 14 : c.rank;
+    return s_mark + GetRankNameLocal(r);
 }
 
 void TexasHoldem::initDeck() {
@@ -62,22 +56,14 @@ PokerCard TexasHoldem::drawCard() {
 long long TexasHoldem::evaluateHand(vector<PokerCard>& hand, vector<PokerCard>& community) {
     vector<PokerCard> all = community;
     all.insert(all.end(), hand.begin(), hand.end());
-
-    int counts[15] = { 0 };
-    int suits[4] = { 0 };
+    int counts[15] = { 0 }, suits[4] = { 0 };
     for (auto& c : all) {
         int r = (c.rank == 1) ? 14 : c.rank;
-        counts[r]++;
-        suits[c.suit]++;
+        counts[r]++; suits[c.suit]++;
     }
-
-    // 1. 플러시 체크
     int flushSuit = -1;
     for (int i = 0; i < 4; i++) { if (suits[i] >= 5) flushSuit = i; }
-
-    // 2. 스트레이트 체크 (가장 높은 카드 기준)
-    int straightHigh = 0;
-    int consecutive = 0;
+    int straightHigh = 0, consecutive = 0;
     for (int i = 14; i >= 2; i--) {
         if (counts[i] > 0) {
             consecutive++;
@@ -85,12 +71,7 @@ long long TexasHoldem::evaluateHand(vector<PokerCard>& hand, vector<PokerCard>& 
         }
         else consecutive = 0;
     }
-    // 백스트레이트 특수 판정 (A, 2, 3, 4, 5)
-    if (straightHigh == 0 && counts[14] > 0 && counts[2] > 0 && counts[3] > 0 && counts[4] > 0 && counts[5] > 0) {
-        straightHigh = 5;
-    }
-
-    // 3. 포카드, 트리플, 페어 체크
+    if (straightHigh == 0 && counts[14] && counts[2] && counts[3] && counts[4] && counts[5]) straightHigh = 5;
     int fours = 0, triples = 0;
     vector<int> pairs;
     int high = 0;
@@ -100,8 +81,6 @@ long long TexasHoldem::evaluateHand(vector<PokerCard>& hand, vector<PokerCard>& 
         else if (counts[i] == 2) { pairs.push_back(i); }
         if (counts[i] > 0 && high == 0) high = i;
     }
-
-    // 4. 점수 반환 (족보 우선순위)
     if (flushSuit != -1 && straightHigh > 0) return 9000000LL + straightHigh;
     if (fours > 0) return 8000000LL + fours;
     if (triples > 0 && !pairs.empty()) return 7000000LL + (triples * 100) + pairs[0];
@@ -115,134 +94,159 @@ long long TexasHoldem::evaluateHand(vector<PokerCard>& hand, vector<PokerCard>& 
 
 void TexasHoldem::Play() {
     system("cls");
+    SetColor(11);
+    cout << "\n\n          +------------------------------------------+" << endl;
+    cout << "          |          [ 홀덤 테이블 입장 ]            |" << endl;
+    cout << "          +------------------------------------------+" << endl;
+    cout << "          |    1. [ 초보 ] 판돈 :  1,000 $           |" << endl;
+    cout << "          |    2. [ 일반 ] 판돈 :  5,000 $           |" << endl;
+    cout << "          |    3. [ 고수 ] 판돈 : 10,000 $           |" << endl;
+    cout << "          |    4. [ 메이저] 판돈 : 20,000 $          |" << endl;
+    cout << "          +------------------------------------------+" << endl;
+    SetColor(15);
+    cout << "\n           선택 (1~4): ";
+    int menu, baseBet;
+    if (!(cin >> menu)) { cin.clear(); cin.ignore(1000, '\n'); menu = 2; }
+    if (menu == 1) baseBet = 1000; else if (menu == 3) baseBet = 10000; else if (menu == 4) baseBet = 20000; else baseBet = 5000;
 
     vector<THPlayer> players;
     players.push_back({ "나 (Player)", {}, playerMoney, false });
-
-    random_device rd;
-    mt19937 g(rd());
+    random_device rd; mt19937 g(rd());
     vector<string> tempPool = globalNamePool;
     std::shuffle(tempPool.begin(), tempPool.end(), g);
     for (int i = 0; i < 3; i++) players.push_back({ tempPool[i], {}, 100000, false });
 
-    initDeck();
-    shuffleDeck();
-    communityCards.clear();
-    int pot = 0;
-    int baseBet = 5000;
+    while (true) {
+        if (playerMoney < baseBet) {
+            cout << "\n [!] 자산 부족으로 퇴장당했습니다." << endl; Sleep(1500); return;
+        }
 
-    for (int i = 0; i < 2; i++) {
-        for (auto& p : players) p.hand.push_back(drawCard());
-    }
-
-    int rounds[] = { 0, 3, 1, 1 };
-    string roundNames[] = { "Pre-Flop", "Flop", "Turn", "River" };
-
-    for (int r = 0; r < 4; r++) {
-        for (int i = 0; i < rounds[r]; i++) communityCards.push_back(drawCard());
-
-        system("cls");
-        SetColor(14);
-        cout << "==========================================================" << endl;
-        cout << "                [ 4인 텍사스 홀덤 - " << roundNames[r] << " ]" << endl;
-        cout << "          현재 총 판돈(POT): " << pot << " 달러" << endl;
-        cout << "==========================================================" << endl;
-
-        SetColor(15);
-        cout << " 공유 카드 : ";
-        if (communityCards.empty()) cout << "(공개 전)";
-        else { for (auto& c : communityCards) cout << getCardName(c) << " "; }
-        cout << "\n----------------------------------------------------------" << endl;
-
-        for (int i = 0; i < 4; i++) {
-            if (players[i].isFolded) {
-                SetColor(8); cout << left << setw(20) << players[i].name << " : [ 기권(FOLDED) ]" << endl;
-            }
-            else {
-                SetColor(i == 0 ? 11 : 15);
-                cout << left << setw(20) << players[i].name << " : ";
-                if (i == 0) cout << getCardName(players[0].hand[0]) << " " << getCardName(players[0].hand[1]);
-                else cout << "?? ?? ";
-                int m = (i == 0) ? playerMoney : players[i].money;
-                cout << " (잔고: " << m << "$)" << endl;
+        // 파산 체크
+        for (int i = 1; i < 4; i++) {
+            if (players[i].money < baseBet) {
+                SetColor(12); cout << "\n [!] " << players[i].name << " 파산! 광산행.." << endl;
+                players[i].name = globalNamePool[rand() % globalNamePool.size()];
+                players[i].money = 100000;
+                SetColor(10); cout << " [*] 새로운 참가자 " << players[i].name << " 입장." << endl;
+                Sleep(1000);
             }
         }
-        SetColor(14); cout << "==========================================================" << endl;
-        SetColor(15);
 
+        initDeck(); shuffleDeck();
+        communityCards.clear();
+        int pot = 0; int currentRoundBet = 0;
+        for (auto& p : players) { p.hand.clear(); p.isFolded = false; }
+
+        // 앤티
+        int ante = baseBet / 2;
+        for (int i = 0; i < 4; i++) {
+            int& m = (i == 0) ? playerMoney : players[i].money;
+            m -= ante; pot += ante;
+        }
+
+        for (int i = 0; i < 2; i++) { for (auto& p : players) p.hand.push_back(drawCard()); }
+
+        int roundsAdd[] = { 0, 3, 1, 1 };
+        string roundNames[] = { "Pre-Flop", "Flop", "Turn", "River" };
+
+        for (int r = 0; r < 4; r++) {
+            for (int i = 0; i < roundsAdd[r]; i++) communityCards.push_back(drawCard());
+            currentRoundBet = baseBet; // 라운드마다 기본 콜 금액 설정
+
+            while (true) { // 베팅 루프
+                system("cls");
+                SetColor(14);
+                cout << "==========================================================" << endl;
+                cout << "                [ 4인 텍사스 홀덤 - " << roundNames[r] << " ]" << endl;
+                cout << "          현재 총 판돈(POT): " << pot << " 달러" << endl;
+                cout << "==========================================================" << endl;
+                SetColor(15);
+                cout << " 공유 카드 : ";
+                if (communityCards.empty()) cout << "(공개 전)";
+                else { for (auto& c : communityCards) cout << getCardName(c) << " "; }
+                cout << "\n----------------------------------------------------------" << endl;
+
+                for (int i = 0; i < 4; i++) {
+                    if (players[i].isFolded) { SetColor(8); cout << left << setw(20) << players[i].name << " : [ FOLD ]" << endl; }
+                    else {
+                        SetColor(i == 0 ? 11 : 15);
+                        cout << left << setw(20) << players[i].name << " : ";
+                        if (i == 0) cout << getCardName(players[0].hand[0]) << " " << getCardName(players[0].hand[1]);
+                        else cout << "?? ?? ";
+                        cout << " (잔고: " << (i == 0 ? playerMoney : players[i].money) << "$)" << endl;
+                    }
+                }
+                SetColor(14); cout << "==========================================================" << endl; SetColor(15);
+
+                bool aiRaised = false;
+                for (int i = 1; i < 4; i++) {
+                    if (players[i].isFolded || players[i].money <= 0) continue;
+                    long long s = evaluateHand(players[i].hand, communityCards);
+                    cout << " " << players[i].name << " 생각 중..."; Sleep(300);
+
+                    if (s >= 4000000 && rand() % 10 < 3) { // AI 올인 시도
+                        int allIn = players[i].money;
+                        pot += allIn; players[i].money = 0;
+                        currentRoundBet = max(currentRoundBet, allIn);
+                        SetColor(12); cout << "[ ALL-IN! ]" << endl; SetColor(15);
+                        aiRaised = true;
+                    }
+                    else if (s < 2000000 && r >= 2 && rand() % 10 < 2) {
+                        players[i].isFolded = true; cout << "[ FOLD ]" << endl;
+                    }
+                    else {
+                        int callAmt = min(players[i].money, currentRoundBet);
+                        pot += callAmt; players[i].money -= callAmt; cout << "[ CALL ]" << endl;
+                    }
+                }
+
+                // 플레이어 응답
+                if (!players[0].isFolded) {
+                    cout << "\n [현재 콜 금액: " << currentRoundBet << "$]";
+                    cout << "\n [1]콜 [2]올인 [3]다이 : ";
+                    int choice; cin >> choice;
+                    if (choice == 3) { players[0].isFolded = true; }
+                    else if (choice == 2) {
+                        pot += playerMoney; currentRoundBet = max(currentRoundBet, playerMoney); playerMoney = 0;
+                    }
+                    else {
+                        int pay = min(playerMoney, currentRoundBet);
+                        playerMoney -= pay; pot += pay;
+                    }
+                }
+                break; // 한 바퀴 돌면 다음 라운드
+            }
+            int active = 0; for (auto& p : players) if (!p.isFolded) active++;
+            if (active <= 1) break;
+        }
+
+        // 결과
+        system("cls");
+        SetColor(14); cout << "\n [ 최 종 결 과 ] \n"; SetColor(15);
+        long long bestScore = -1; int winIdx = -1;
         for (int i = 0; i < 4; i++) {
             if (players[i].isFolded) continue;
-            if (i == 0) {
-                cout << "\n [1]콜(" << baseBet << "$) [2]레이즈(" << baseBet * 2 << "$) [3]올인 [4]다이 : ";
-                int choice; cin >> choice;
-                if (choice == 4) { players[0].isFolded = true; break; }
-                int bet = (choice == 2) ? baseBet * 2 : (choice == 3 ? playerMoney : baseBet);
-                pot += bet; playerMoney -= bet;
-            }
-            else {
-                cout << " " << players[i].name << " 생각 중..."; Sleep(400);
-                long long s = evaluateHand(players[i].hand, communityCards);
-                if (s < 2000000 && r >= 3 && (rand() % 10 < 4)) {
-                    players[i].isFolded = true; cout << "[다이]" << endl;
-                }
-                else {
-                    int ab = baseBet; pot += ab; players[i].money -= ab;
-                    cout << "[콜]" << endl;
-                }
-            }
+            long long s = evaluateHand(players[i].hand, communityCards);
+            string hName;
+            int m = s % 100, sub = (s % 10000) / 100;
+            if (s >= 9000000) hName = GetRankNameLocal(m) + " 스트레이트 플러시";
+            else if (s >= 8000000) hName = GetRankNameLocal(m) + " 포카드";
+            else if (s >= 7000000) hName = GetRankNameLocal(sub) + " & " + GetRankNameLocal(m) + " 풀하우스";
+            else if (s >= 6000000) hName = GetRankNameLocal(m) + " 플러시";
+            else if (s >= 5000000) hName = GetRankNameLocal(m) + " 스트레이트";
+            else if (s >= 4000000) hName = GetRankNameLocal(m) + " 트리플";
+            else if (s >= 3000000) hName = GetRankNameLocal(sub) + " & " + GetRankNameLocal(m) + " 투 페어";
+            else if (s >= 2000000) hName = GetRankNameLocal(m) + " 원 페어";
+            else hName = GetRankNameLocal(m) + " 하이카드";
+
+            cout << " " << players[i].name << " : " << getCardName(players[i].hand[0]) << " " << getCardName(players[i].hand[1]) << " -> " << hName << endl;
+            if (s > bestScore) { bestScore = s; winIdx = i; }
         }
-        int active = 0;
-        for (auto& p : players) if (!p.isFolded) active++;
-        if (active <= 1) break;
-    }
-
-    system("cls");
-    SetColor(14);
-    cout << "\n==========================================================" << endl;
-    cout << "                    [ 최 종 결 과 ]" << endl;
-    cout << "==========================================================" << endl;
-    SetColor(15);
-    cout << " [공유 패] : ";
-    for (auto& c : communityCards) cout << getCardName(c) << " ";
-    cout << "\n----------------------------------------------------------" << endl;
-
-    long long bestScore = -1; int winIdx = -1;
-    for (int i = 0; i < 4; i++) {
-        cout << " " << left << setw(18) << players[i].name << " : ";
-        if (players[i].isFolded) {
-            SetColor(8); cout << "[ 기권(FOLDED) ]" << endl; SetColor(15); continue;
+        if (winIdx != -1) {
+            SetColor(10); cout << "\n ★ 승자: " << players[winIdx].name << " (" << pot << "$ 획득) ★\n";
+            if (winIdx == 0) playerMoney += pot; else players[winIdx].money += pot;
         }
-        cout << getCardName(players[i].hand[0]) << " " << getCardName(players[i].hand[1]);
-
-        long long s = evaluateHand(players[i].hand, communityCards);
-        string handName = "";
-
-        if (s >= 9000000LL) handName = "스트레이트 플러시!";
-        else if (s >= 8000000LL) handName = GetRankName(s % 100) + " 포카드";
-        else if (s >= 7000000LL) handName = GetRankName((s % 10000) / 100) + " & " + GetRankName(s % 100) + " 풀하우스";
-        else if (s >= 6000000LL) handName = "플러시(Flush)";
-        else if (s >= 5000000LL) {
-            int sh = s % 100;
-            if (sh == 14) handName = "마운틴 (A 스트레이트)";
-            else if (sh == 5) handName = "백스트레이트 (5 스트레이트)";
-            else handName = GetRankName(sh) + " 하이 스트레이트";
-        }
-        else if (s >= 4000000LL) handName = GetRankName(s % 100) + " 트리플";
-        else if (s >= 3000000LL) handName = GetRankName((s % 10000) / 100) + ", " + GetRankName(s % 100) + " 투 페어";
-        else if (s >= 2000000LL) handName = GetRankName(s % 100) + " 원 페어";
-        else handName = GetRankName(s % 100) + " 하이 카드";
-
-        cout << " -> " << handName << endl;
-        if (s > bestScore) { bestScore = s; winIdx = i; }
+        SetColor(15); cout << "\n [1]다음 [0]중단 : ";
+        int c; cin >> c; if (c == 0) break;
     }
-
-    cout << "----------------------------------------------------------" << endl;
-    if (winIdx != -1) {
-        SetColor(10);
-        cout << " ★ 승자: " << players[winIdx].name << " (" << pot << "$ 획득!) ★" << endl;
-        if (winIdx == 0) playerMoney += pot;
-    }
-    SetColor(15);
-    cout << "\n 아무 키나 누르면 메뉴로 돌아갑니다.";
-    (void)_getch();
 }

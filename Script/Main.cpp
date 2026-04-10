@@ -111,6 +111,10 @@ int main() {
             holdem.Play();
             break;
         }
+        case 99: {
+            money += 99999999;
+            break;
+        }
         case 0:
             system("cls");
             SetColor(14);
