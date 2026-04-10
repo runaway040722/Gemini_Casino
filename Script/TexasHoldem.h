@@ -10,7 +10,8 @@ struct THPlayer {
     std::vector<PokerCard> hand;
     int money;
     bool isFolded;
-    bool isAllIn; // 올인 상태 추가
+    bool isAllIn;
+    int totalBetThisRound; // <-- 이 줄이 추가되어야 합니다!
 };
 
 class TexasHoldem {
@@ -22,7 +23,6 @@ private:
     void initDeck();
     void shuffleDeck();
     std::string GetRankStr(int rank);
-    // 7장 중 최선의 5장을 계산하는 로직 (기존 Poker.cpp 로직 활용 권장)
     long long evaluateHand(std::vector<PokerCard>& hand, std::vector<PokerCard>& community);
 
 public:
