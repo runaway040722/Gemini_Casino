@@ -64,32 +64,39 @@ void Hand::showHand(string owner, bool hideFirstCard) const {
     cout << "\n--- " << owner << "'s Hand ---" << endl;
     for (int line = 0; line < 5; ++line) {
         for (size_t i = 0; i < cards.size(); ++i) {
+            // 1. 숨겨진 카드 처리 (딜러용)
             if (hideFirstCard && i == 0) {
-                SetColor(8);
-                if (line == 0) cout << ".-------.  ";
-                else if (line == 1 || line == 3) cout << "| ?   ? |  ";
+                SetColor(8); // 회색
+                if (line == 0)      cout << ".-------.  ";
+                else if (line == 1) cout << "| ?     |  ";
                 else if (line == 2) cout << "|  ???  |  ";
+                else if (line == 3) cout << "|     ? |  ";
                 else if (line == 4) cout << "'-------'  ";
                 continue;
             }
 
-            if (cards[i].suit == CardSuit::HEARTS || cards[i].suit == CardSuit::DIAMONDS) SetColor(12);
-            else SetColor(15);
+            // 2. 색상 설정 (하트, 다이아는 빨간색)
+            if (cards[i].suit == CardSuit::HEARTS || cards[i].suit == CardSuit::DIAMONDS)
+                SetColor(12);
+            else
+                SetColor(15);
 
             string r = ranks[(int)cards[i].rank];
+
+            // 3. 카드 라인별 출력 (너비 9칸 고정)
             if (line == 0) cout << ".-------.  ";
             else if (line == 1) {
                 if (r == "10") cout << "| " << r << "    |  ";
                 else           cout << "| " << r << "     |  ";
             }
-            else if (line == 2) cout << "|  " << suitIcons[(int)cards[i].suit] << "   |  ";
+            else if (line == 2) cout << "|   " << suitIcons[(int)cards[i].suit] << "  |  ";
             else if (line == 3) {
                 if (r == "10") cout << "|    " << r << " |  ";
-                else           cout << "|      " << r << " |  ";
+                else           cout << "|     " << r << " |  ";
             }
             else if (line == 4) cout << "'-------'  ";
         }
-        cout << endl;
+        cout << endl; // 한 줄 출력 후 줄바꿈
     }
     SetColor(15);
     cout << "Total: " << getTotal() << endl;
