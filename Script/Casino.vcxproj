@@ -131,6 +131,7 @@
     <ClCompile Include="NumberBaseball.cpp" />
     <ClCompile Include="Poker.cpp" />
     <ClCompile Include="PopUpGame.cpp" />
+    <ClCompile Include="RussianRoulette.cpp" />
     <ClCompile Include="System.cpp" />
     <ClCompile Include="EvenOdd.cpp" />
     <ClCompile Include="Main.cpp" />
@@ -147,6 +148,7 @@
     <ClInclude Include="NumberBaseball.h" />
     <ClInclude Include="Poker.h" />
     <ClInclude Include="PopUpGame.h" />
+    <ClInclude Include="RussianRoulette.h" />
     <ClInclude Include="System.h" />
     <ClInclude Include="EvenOdd.h" />
     <ClInclude Include="SlotMachine.h" />

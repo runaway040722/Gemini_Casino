@@ -11,6 +11,7 @@
 #include "IndianPoker.h"
 #include "PopUpGame.h"
 #include "TexasHoldem.h"
+#include "RussianRoulette.h"
 #include "Mine.h"
 #include <limits>
 #include <climits> // INT_MAX 사용을 위해 필요
@@ -54,6 +55,7 @@ void ShowMainMenu(int money) {
     cout << "      (9)  인디언 포커" << endl;
     cout << "      (10) 통 아저씨" << endl;
     cout << "      (11) 텍사스 홀덤" << endl;
+    cout << "      (12) 러시안 룰렛" << endl; 
 
     cout << endl;
     SetColor(12); // 빨간색 (종료)
@@ -149,6 +151,10 @@ int main() {
                     system("cls");
                     TexasHoldem holdem(money);
                     holdem.Play();
+                    break;
+                }
+                case 12: { // 추가
+                    PlayRussianRoulette(money);
                     break;
                 }
         case 99: { // 치트키
